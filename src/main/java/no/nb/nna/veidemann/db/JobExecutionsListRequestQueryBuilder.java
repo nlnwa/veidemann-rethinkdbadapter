@@ -35,7 +35,7 @@ public class JobExecutionsListRequestQueryBuilder extends ConfigListQueryBuilder
             buildIdQuery(request.getIdList());
         } else {
             if (!request.getStateList().isEmpty()) {
-                addQuery(r.table(table.name).getAll(request.getJobId()).optArg("index", "state"));
+                addQuery(r.table(table.name).getAll(r.args(request.getStateList())).optArg("index", "state"));
             }
 
             if (!request.getJobId().isEmpty()) {

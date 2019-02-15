@@ -501,6 +501,7 @@ public class RethinkDbExecutionsAdapterIT {
     public void listJobExecutionStatus() throws DbException {
         JobExecutionStatus jes1 = executionsAdapter.createJobExecutionStatus("jobId1");
         JobExecutionStatus jes2 = executionsAdapter.createJobExecutionStatus("jobId1");
+        jes2 = executionsAdapter.setJobExecutionStateAborted(jes2.getId());
 
         // Check job executions list functions
         JobExecutionsListReply jList = executionsAdapter.listJobExecutionStatus(ListJobExecutionsRequest.getDefaultInstance());
@@ -512,6 +513,14 @@ public class RethinkDbExecutionsAdapterIT {
         assertThat(jList.getCount()).isEqualTo(1);
         assertThat(jList.getValueCount()).isEqualTo(1);
         assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes2);
+
+        System.out.println(executionsAdapter.getJobExecutionStatus(jes1.getId()).getState());
+        System.out.println(executionsAdapter.getJobExecutionStatus(jes2.getId()).getState());
+
+        jList = executionsAdapter.listJobExecutionStatus(ListJobExecutionsRequest.newBuilder().addState("RUNNING").build());
+        assertThat(jList.getCount()).isEqualTo(1);
+        assertThat(jList.getValueCount()).isEqualTo(1);
+        assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes1);
     }
 
 }
