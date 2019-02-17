@@ -16,21 +16,25 @@
 
 package no.nb.nna.veidemann.db;
 
+import com.rethinkdb.net.Cursor;
+import no.nb.nna.veidemann.commons.db.ChangeFeed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import com.rethinkdb.net.Cursor;
-import no.nb.nna.veidemann.commons.db.ChangeFeed;
-
 /**
  *
  */
 public abstract class ChangeFeedBase<T> implements ChangeFeed<T> {
-    final Cursor cursor;
+    private static final Logger LOG = LoggerFactory.getLogger(ChangeFeedBase.class);
 
-    public ChangeFeedBase(Cursor cursor) {
+    final Cursor<Map<String, Object>> cursor;
+
+    public ChangeFeedBase(Cursor<Map<String, Object>> cursor) {
         this.cursor = cursor;
     }
 
@@ -38,7 +42,18 @@ public abstract class ChangeFeedBase<T> implements ChangeFeed<T> {
 
     @Override
     public Stream<T> stream() {
-        return ((Stream) StreamSupport.stream(cursor.spliterator(), false).onClose(cursor::close)).map(mapper());
+        return StreamSupport
+                .stream(cursor.spliterator(), false)
+                .onClose(cursor::close)
+                .map(o -> {
+                    try {
+                        return mapper().apply(o);
+                    } catch (Throwable e) {
+                        LOG.error("Error mapping database object", e);
+                        return null;
+                    }
+                })
+                .filter(o -> o != null);
     }
 
     @Override

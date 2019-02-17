@@ -381,7 +381,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
         if (limit == 0) {
             limit = 100;
         }
-        Cursor<Map> res = conn.exec("db-getExecutionStatusStream",
+        Cursor<Map<String, Object>> res = conn.exec("db-getExecutionStatusStream",
                 r.table(Tables.EXECUTIONS.name)
                         .orderBy().optArg("index", r.desc("startTime"))
                         .limit(limit)

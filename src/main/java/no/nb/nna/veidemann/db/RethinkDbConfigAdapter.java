@@ -90,7 +90,7 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
     public ChangeFeed<ConfigObject> listConfigObjects(no.nb.nna.veidemann.api.config.v1.ListRequest request) throws DbQueryException, DbConnectionException {
         ListConfigObjectQueryBuilder q = new ListConfigObjectQueryBuilder(request);
 
-        Cursor<Map> res = conn.exec("db-listConfigObjects", q.getListQuery());
+        Cursor<Map<String, Object>> res = conn.exec("db-listConfigObjects", q.getListQuery());
 
         return new ChangeFeedBase<ConfigObject>(res) {
             @Override
