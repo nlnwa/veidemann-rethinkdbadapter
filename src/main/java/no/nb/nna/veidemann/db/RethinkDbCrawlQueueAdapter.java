@@ -153,6 +153,8 @@ public class RethinkDbCrawlQueueAdapter implements CrawlQueueAdapter {
                     lock.unlock();
                 }
             }
+        } catch (Exception e) {
+            LOG.error("Failed borrowing CrawlHostGroup", e);
         }
 
         return FutureOptional.empty();
