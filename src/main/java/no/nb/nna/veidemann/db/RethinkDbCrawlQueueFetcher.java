@@ -23,6 +23,7 @@ import no.nb.nna.veidemann.api.frontier.v1.QueuedUri;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbQueryException;
+import no.nb.nna.veidemann.commons.db.DbService;
 import no.nb.nna.veidemann.commons.db.DistributedLock;
 import no.nb.nna.veidemann.commons.db.DistributedLock.Key;
 import no.nb.nna.veidemann.commons.db.FutureOptional;
@@ -80,6 +81,11 @@ public class RethinkDbCrawlQueueFetcher {
     public CrawlableUri getNextToFetch() throws InterruptedException {
         try {
             while (true) {
+                if (DbService.getInstance().getDbAdapter().getDesiredPausedState()) {
+                    Thread.sleep(RESCHEDULE_DELAY);
+                    continue;
+                }
+
                 Map<String, Object> chgDoc = getNextCrawlHostGroup();
                 List chgId = (List) chgDoc.get("id");
 
