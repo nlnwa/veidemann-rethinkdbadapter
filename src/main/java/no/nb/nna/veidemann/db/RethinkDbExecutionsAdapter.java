@@ -278,7 +278,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     }
 
     private void updateJobExecution(String jobExecutionId) throws DbException {
-        DistributedLock lock = conn.createDistributedLock(new Key("jobexe", jobExecutionId), 60);
+        DistributedLock lock = conn.createDistributedLock(new Key("jobexe", jobExecutionId), 300);
         lock.lock();
         try {
             // Get a count of still running CrawlExecutions for this execution's JobExecution

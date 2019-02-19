@@ -49,8 +49,8 @@ public class RethinkDbDistributedLock implements DistributedLock {
                 return;
             }
             try {
-                if ((System.currentTimeMillis() - start) > 15000) {
-                    LOG.warn("Object has been locked for more than 15s. Lock: {}:{}", key.getDomain(), key.getKey(), new RuntimeException());
+                if ((System.currentTimeMillis() - start) > (expireSeconds / 2) * 1000) {
+                    LOG.warn("Object has been locked for more than {}s. Lock: {}:{}", (expireSeconds / 2), key.getDomain(), key.getKey(), new RuntimeException());
                     start = System.currentTimeMillis();
                 }
                 Thread.sleep(200);

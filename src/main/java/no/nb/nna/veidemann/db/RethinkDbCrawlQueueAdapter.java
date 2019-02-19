@@ -19,6 +19,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 public class RethinkDbCrawlQueueAdapter implements CrawlQueueAdapter {
     private static final Logger LOG = LoggerFactory.getLogger(RethinkDbCrawlQueueAdapter.class);
@@ -82,75 +83,83 @@ public class RethinkDbCrawlQueueAdapter implements CrawlQueueAdapter {
         }
     }
 
+    public RethinkDbCrawlQueueFetcher getCrawlQueueFetcher() {
+        return new RethinkDbCrawlQueueFetcher(conn, this);
+    }
+
     @Override
     public FutureOptional<CrawlHostGroup> borrowFirstReadyCrawlHostGroup() throws DbException {
+        List<Map<String, Object>> crawlHostGroups = null;
         try (Cursor<Map<String, Object>> response = conn.exec("db-borrowFirstReadyCrawlHostGroup",
                 r.table(Tables.CRAWL_HOST_GROUP.name)
                         .orderBy().optArg("index", "nextFetchTime")
-                        .between(r.minval(), r.now()).optArg("right_bound", "closed")
+                        .between(r.minval(), r.now()).optArg("right_bound", "closed").limit(100)
         )) {
-
-            for (Map<String, Object> chgDoc : response) {
+            crawlHostGroups = response.toList();
+        } catch (Exception e) {
+            LOG.error("Failed listing CrawlHostGroups", e);
+        }
+        try {
+            for (Map<String, Object> chgDoc : crawlHostGroups) {
                 List chgId = (List) chgDoc.get("id");
 
                 DistributedLock lock = conn.createDistributedLock(createKey(chgId), lockExpirationSeconds);
-                lock.lock();
-                try {
-                    Map<String, Object> borrowResponse = conn.exec("db-borrowFirstReadyCrawlHostGroup",
-                            r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
-                                    .get(chgId)
-                                    .replace(d ->
-                                            r.branch(
-                                                    // CrawlHostGroup doesn't exist, return null
-                                                    d.eq(null),
-                                                    null,
+                if (lock.tryLock(3, TimeUnit.SECONDS)) {
+                    try {
+                        Map<String, Object> borrowResponse = conn.exec("db-borrowFirstReadyCrawlHostGroup",
+                                r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
+                                        .get(chgId)
+                                        .replace(d ->
+                                                r.branch(
+                                                        // CrawlHostGroup doesn't exist, return null
+                                                        d.eq(null),
+                                                        null,
 
-                                                    // Busy is false or expired. This is the one we want, ensure busy is false and return it
-                                                    d.g("busy").eq(false).or(d.g("expires").lt(r.now())),
-                                                    d.merge(r.hashMap("busy", false).with("expires", r.now())),
+                                                        // Busy is false or expired. This is the one we want, ensure busy is false and return it
+                                                        d.g("busy").eq(false).or(d.g("expires").lt(r.now())),
+                                                        d.merge(r.hashMap("busy", false).with("expires", r.now())),
 
-                                                    // The CrawlHostGroup is busy, return it unchanged
-                                                    d
-                                            ))
-                                    .optArg("return_changes", true)
-                                    .optArg("durability", "hard")
-                    );
+                                                        // The CrawlHostGroup is busy, return it unchanged
+                                                        d
+                                                ))
+                                        .optArg("return_changes", true)
+                                        .optArg("durability", "hard")
+                        );
 
-                    if (borrowResponse == null) {
-                        return FutureOptional.empty();
-                    } else {
-                        long replaced = (long) borrowResponse.get("replaced");
-                        if (replaced == 1L) {
-                            Map<String, Object> newDoc = ((List<Map<String, Map>>) borrowResponse.get("changes")).get(0).get("new_val");
-                            long queueCount = crawlHostGroupQueueCount(chgId);
+                        if (borrowResponse != null) {
+                            long replaced = (long) borrowResponse.get("replaced");
+                            if (replaced == 1L) {
+                                Map<String, Object> newDoc = ((List<Map<String, Map>>) borrowResponse.get("changes")).get(0).get("new_val");
+                                long queueCount = crawlHostGroupQueueCount(chgId);
 
-                            if (queueCount == 0L) {
-                                // No more URIs in queue for this CrawlHostGroup, delete it
-                                conn.exec("db-deleteCrawlHostGroup",
-                                        r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
-                                                .get(chgId)
-                                                .delete()
-                                                .optArg("return_changes", false)
-                                                .optArg("durability", "hard")
-                                );
-                            } else {
-                                newDoc.put("busy", true);
-                                newDoc.put("expires", r.now().add(expirationSeconds));
-                                CrawlHostGroup chg = buildCrawlHostGroup(newDoc, queueCount);
+                                if (queueCount == 0L) {
+                                    // No more URIs in queue for this CrawlHostGroup, delete it
+                                    conn.exec("db-deleteCrawlHostGroup",
+                                            r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
+                                                    .get(chgId)
+                                                    .delete()
+                                                    .optArg("return_changes", false)
+                                                    .optArg("durability", "hard")
+                                    );
+                                } else {
+                                    newDoc.put("busy", true);
+                                    newDoc.put("expires", r.now().add(expirationSeconds));
+                                    CrawlHostGroup chg = buildCrawlHostGroup(newDoc, queueCount);
 
-                                conn.exec("db-saveCrawlHostGroup",
-                                        r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
-                                                .get(chgId)
-                                                .replace(newDoc)
-                                                .optArg("return_changes", false)
-                                                .optArg("durability", "hard")
-                                );
-                                return FutureOptional.of(chg);
+                                    conn.exec("db-saveCrawlHostGroup",
+                                            r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
+                                                    .get(chgId)
+                                                    .replace(newDoc)
+                                                    .optArg("return_changes", false)
+                                                    .optArg("durability", "hard")
+                                    );
+                                    return FutureOptional.of(chg);
+                                }
                             }
                         }
+                    } finally {
+                        lock.unlock();
                     }
-                } finally {
-                    lock.unlock();
                 }
             }
         } catch (Exception e) {
