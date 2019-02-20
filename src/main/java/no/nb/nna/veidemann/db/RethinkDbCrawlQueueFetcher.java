@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 public class RethinkDbCrawlQueueFetcher {
     private static final Logger LOG = LoggerFactory.getLogger(RethinkDbDistributedLock.class);
-    private static final long RESCHEDULE_DELAY = 1000;
+    private static final long RESCHEDULE_DELAY = 2000;
     private final long CHG_EXPIRATION_SECONDS = 1800;
     private final int LOCK_EXPIRATION_SECONDS = 1800;
     private static final RethinkDB r = RethinkDB.r;
@@ -47,6 +47,8 @@ public class RethinkDbCrawlQueueFetcher {
     private final RethinkDbConnection conn;
     private final RethinkDbCrawlQueueAdapter crawlQueueAdapter;
     private final LinkedBlockingQueue<Map<String, Object>> chgQueue;
+
+    private int prefetchSize = 100;
 
     public RethinkDbCrawlQueueFetcher(RethinkDbConnection conn, RethinkDbCrawlQueueAdapter crawlQueueAdapter) {
         this.conn = conn;
@@ -58,7 +60,7 @@ public class RethinkDbCrawlQueueFetcher {
         try (Cursor<Map<String, Object>> response = conn.exec("db-borrowFirstReadyCrawlHostGroup",
                 r.table(Tables.CRAWL_HOST_GROUP.name)
                         .orderBy().optArg("index", "nextFetchTime")
-                        .between(r.minval(), r.now()).optArg("right_bound", "closed").limit(100)
+                        .between(r.minval(), r.now()).optArg("right_bound", "closed").limit(prefetchSize)
         )) {
             chgQueue.addAll(response.toList());
         } catch (Exception e) {
@@ -76,6 +78,10 @@ public class RethinkDbCrawlQueueFetcher {
             }
         }
         return chg;
+    }
+
+    public void setPrefetchSize(int size) {
+        prefetchSize = size;
     }
 
     public CrawlableUri getNextToFetch() throws InterruptedException {

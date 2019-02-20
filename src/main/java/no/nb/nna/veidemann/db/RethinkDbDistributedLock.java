@@ -107,7 +107,7 @@ public class RethinkDbDistributedLock implements DistributedLock {
             if (oldVal.get("instanceId").equals(newVal.get("instanceId"))) {
                 LOG.debug("Lock is already owned by this instance");
             } else {
-                LOG.debug("Lock is expired");
+                LOG.info("Lock is expired");
             }
 
             return true;
