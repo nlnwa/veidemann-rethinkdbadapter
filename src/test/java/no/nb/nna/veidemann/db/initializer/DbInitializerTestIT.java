@@ -118,6 +118,36 @@ public class DbInitializerTestIT {
     }
 
     @Test
+    public void repair() throws DbException {
+        DbService.getInstance().getDbInitializer().initialize();
+
+        String version = db.executeRequest("", r.table(Tables.SYSTEM.name).get("db_version").g("db_version"));
+        assertThat(version).isEqualTo(CreateNewDb.DB_VERSION);
+
+        List<String> tables = db.executeRequest("", r.tableList());
+        assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name, Tables.SEEDS.name,
+                Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
+                Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
+                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name);
+
+        db.executeRequest("", r.tableDrop(Tables.SEEDS.name));
+
+        tables = db.executeRequest("", r.tableList());
+        assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name,
+                Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
+                Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
+                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name);
+
+        DbService.getInstance().getDbInitializer().initialize();
+
+        tables = db.executeRequest("", r.tableList());
+        assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name, Tables.SEEDS.name,
+                Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
+                Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
+                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name);
+    }
+
+    @Test
     public void upgrade() throws DbException {
         new CreateDbV0_1(db, "veidemann").run();
         DbService.getInstance().getDbInitializer().initialize();

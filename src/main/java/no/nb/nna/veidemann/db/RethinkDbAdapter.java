@@ -182,28 +182,16 @@ public class RethinkDbAdapter implements DbAdapter {
 
     @Override
     public Screenshot saveScreenshot(Screenshot s) throws DbException {
-        Map rMap = ProtoUtils.protoToRethink(s);
-
-        Map<String, Object> response = executeRequest("db-addScreenshot",
-                r.table(Tables.SCREENSHOT.name)
-                        .insert(rMap)
-                        .optArg("conflict", "error"));
-
-        String key = ((List<String>) response.get("generated_keys")).get(0);
-
-        return s.toBuilder().setId(key).build();
+        return null;
     }
 
     @Override
     public ScreenshotListReply listScreenshots(ScreenshotListRequest request) throws DbException {
-        ScreenshotListRequestQueryBuilder queryBuilder = new ScreenshotListRequestQueryBuilder(request);
-        return queryBuilder.executeList(conn).build();
+        return ScreenshotListReply.getDefaultInstance();
     }
 
     @Override
     public Empty deleteScreenshot(Screenshot screenshot) throws DbException {
-        executeRequest("db-deleteScreenshot",
-                r.table(Tables.SCREENSHOT.name).get(screenshot.getId()).delete());
         return Empty.getDefaultInstance();
     }
 

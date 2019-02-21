@@ -54,6 +54,8 @@ public class RethinkDbInitializer implements DbInitializer {
             String version = getCurrentDbVersion();
             if (CreateNewDb.DB_VERSION.equals(version)) {
                 LOG.info("Database found and is newest version: {}", version);
+                // Executes create because this method only creates missing tables
+                new CreateNewDb(dbName, conn).run();
             } else {
                 LOG.info("Database with version {} found, upgrading", version);
                 upgrade(version);

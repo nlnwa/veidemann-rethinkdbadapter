@@ -59,10 +59,10 @@ public class CreateDbV0_1 implements Runnable {
         db.executeRequest("", r.tableCreate(Tables.CRAWL_LOG.name).optArg("primary_key", "warcId"));
         db.executeRequest("", r.table(Tables.CRAWL_LOG.name)
                 .indexCreate("surt_time", row -> r.array(row.g("surt"), row.g("timeStamp"))));
-        db.executeRequest("", r.table(Tables.CRAWL_LOG.name).indexCreate("executeRequestutionId"));
+        db.executeRequest("", r.table(Tables.CRAWL_LOG.name).indexCreate("executionId"));
 
         db.executeRequest("", r.tableCreate(Tables.PAGE_LOG.name).optArg("primary_key", "warcId"));
-        db.executeRequest("", r.table(Tables.PAGE_LOG.name).indexCreate("executeRequestutionId"));
+        db.executeRequest("", r.table(Tables.PAGE_LOG.name).indexCreate("executionId"));
 
         db.executeRequest("", r.tableCreate(Tables.CRAWLED_CONTENT.name).optArg("primary_key", "digest"));
 
@@ -72,7 +72,7 @@ public class CreateDbV0_1 implements Runnable {
 
         db.executeRequest("", r.tableCreate(Tables.URI_QUEUE.name));
         db.executeRequest("", r.table(Tables.URI_QUEUE.name).indexCreate("surt"));
-        db.executeRequest("", r.table(Tables.URI_QUEUE.name).indexCreate("executeRequestutionId"));
+        db.executeRequest("", r.table(Tables.URI_QUEUE.name).indexCreate("executionId"));
         db.executeRequest("", r.table(Tables.URI_QUEUE.name).indexCreate("crawlHostGroupKey_sequence_earliestFetch",
                 uri -> r.array(uri.g("crawlHostGroupId"),
                         uri.g("politenessId"),
@@ -81,9 +81,6 @@ public class CreateDbV0_1 implements Runnable {
 
         db.executeRequest("", r.tableCreate(Tables.EXECUTIONS.name));
         db.executeRequest("", r.table(Tables.EXECUTIONS.name).indexCreate("startTime"));
-
-        db.executeRequest("", r.tableCreate(Tables.SCREENSHOT.name));
-        db.executeRequest("", r.table(Tables.SCREENSHOT.name).indexCreate("executeRequestutionId"));
 
         db.executeRequest("", r.tableCreate(Tables.CRAWL_ENTITIES.name));
 
@@ -126,10 +123,9 @@ public class CreateDbV0_1 implements Runnable {
         );
 
         db.executeRequest("", r.table(Tables.URI_QUEUE.name)
-                .indexWait("surt", "executeRequestutionId", "crawlHostGroupKey_sequence_earliestFetch"));
-        db.executeRequest("", r.table(Tables.CRAWL_LOG.name).indexWait("surt_time", "executeRequestutionId"));
-        db.executeRequest("", r.table(Tables.PAGE_LOG.name).indexWait("executeRequestutionId"));
-        db.executeRequest("", r.table(Tables.SCREENSHOT.name).indexWait("executeRequestutionId"));
+                .indexWait("surt", "executionId", "crawlHostGroupKey_sequence_earliestFetch"));
+        db.executeRequest("", r.table(Tables.CRAWL_LOG.name).indexWait("surt_time", "executionId"));
+        db.executeRequest("", r.table(Tables.PAGE_LOG.name).indexWait("executionId"));
         db.executeRequest("", r.table(Tables.SEEDS.name).indexWait("jobId", "entityId"));
         db.executeRequest("", r.table(Tables.CRAWL_HOST_GROUP.name).indexWait("nextFetchTime"));
         db.executeRequest("", r.table(Tables.EXECUTIONS.name).indexWait("startTime"));

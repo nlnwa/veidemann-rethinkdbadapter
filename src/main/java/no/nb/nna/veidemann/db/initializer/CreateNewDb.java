@@ -45,23 +45,60 @@ public class CreateNewDb implements Runnable {
     public void run() {
         try {
             createDb();
+            createTables();
         } catch (DbException e) {
             throw new RuntimeException(e);
         }
     }
 
     private final void createDb() throws DbQueryException, DbConnectionException {
-        conn.exec("create-db", r.dbCreate(dbName));
+        if (conn.exec(r.dbList().contains(dbName))) return;
 
-        conn.exec(r.tableCreate(Tables.SYSTEM.name));
-        conn.exec(r.table(Tables.SYSTEM.name).insert(r.hashMap("id", "db_version").with("db_version", DB_VERSION)));
-        conn.exec(r.table(Tables.SYSTEM.name).insert(r.hashMap("id", "log_levels")
+        conn.exec("create-db", r.dbCreate(dbName));
+    }
+
+    private final void createTables() throws DbQueryException, DbConnectionException {
+        createSystemTable();
+        createConfigsTable();
+        createLocksTable();
+        createCrawlLogTable();
+        createPageLogTable();
+        createCrawledContentTable();
+        createStorageRefTable();
+        createExtractedTextTable();
+        createUriQueueTable();
+        createCrawlExecutionsTable();
+        createJobExecutionsTable();
+        createCrawlEntitiesTable();
+        createSeedsTable();
+        createCrawlHostGroupTable();
+    }
+
+    private boolean tableExists(String tableName) throws DbQueryException, DbConnectionException {
+        return conn.exec(r.tableList().contains(tableName));
+    }
+
+    private void createSystemTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.SYSTEM.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+        conn.exec(r.tableCreate(tableName));
+        conn.exec(r.table(tableName).insert(r.hashMap("id", "db_version").with("db_version", DB_VERSION)));
+        conn.exec(r.table(tableName).insert(r.hashMap("id", "log_levels")
                 .with("logLevel",
                         r.array(r.hashMap("logger", "no.nb.nna.veidemann").with("level", "INFO"))
                 )));
+    }
 
-        conn.exec(r.tableCreate(Tables.CONFIG.name));
-        conn.exec(r.table(Tables.CONFIG.name)
+    private void createConfigsTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.CONFIG.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName));
+        conn.exec(r.table(tableName)
                 .indexCreate("configRefs", row -> row
                         .g(Kind.browserConfig.name()).g("scriptRef").map(d -> r.array(d.g("kind"), d.g("id")))
                         .add(r.array(row.g(Kind.crawlJob.name()).g("scheduleRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
@@ -72,75 +109,159 @@ public class CreateNewDb implements Runnable {
                 ).optArg("multi", true)
         );
 
-        conn.exec(r.tableCreate(Tables.LOCKS.name));
+        conn.exec(r.table(tableName).indexWait("configRefs"));
+        createMetaIndexes(Tables.CONFIG);
+    }
 
-        conn.exec(r.tableCreate(Tables.CRAWL_LOG.name).optArg("primary_key", "warcId"));
-        conn.exec(r.table(Tables.CRAWL_LOG.name)
+    private void createLocksTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.LOCKS.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName));
+    }
+
+    private void createCrawlHostGroupTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.CRAWL_HOST_GROUP.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName));
+        conn.exec(r.table(tableName).indexCreate("nextFetchTime"));
+
+        conn.exec(r.table(tableName).indexWait("nextFetchTime"));
+    }
+
+    private void createCrawlLogTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.CRAWL_LOG.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName).optArg("primary_key", "warcId"));
+        conn.exec(r.table(tableName)
                 .indexCreate("surt_time", row -> r.array(row.g("surt"), row.g("timeStamp"))));
-        conn.exec(r.table(Tables.CRAWL_LOG.name).indexCreate("executionId"));
+        conn.exec(r.table(tableName).indexCreate("executionId"));
 
-        conn.exec(r.tableCreate(Tables.PAGE_LOG.name).optArg("primary_key", "warcId"));
-        conn.exec(r.table(Tables.PAGE_LOG.name).indexCreate("executionId"));
+        conn.exec(r.table(tableName).indexWait("surt_time", "executionId"));
+    }
 
-        conn.exec(r.tableCreate(Tables.CRAWLED_CONTENT.name).optArg("primary_key", "digest"));
+    private void createPageLogTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.PAGE_LOG.name;
+        if (tableExists(tableName)) return;
 
-        conn.exec(r.tableCreate(Tables.STORAGE_REF.name).optArg("primary_key", "warcId"));
+        LOG.info("Creating table {}", tableName);
 
-        conn.exec(r.tableCreate(Tables.EXTRACTED_TEXT.name).optArg("primary_key", "warcId"));
+        conn.exec(r.tableCreate(tableName).optArg("primary_key", "warcId"));
+        conn.exec(r.table(tableName).indexCreate("executionId"));
 
-        conn.exec(r.tableCreate(Tables.URI_QUEUE.name));
-        conn.exec(r.table(Tables.URI_QUEUE.name).indexCreate("surt"));
-        conn.exec(r.table(Tables.URI_QUEUE.name).indexCreate("executionId"));
-        conn.exec(r.table(Tables.URI_QUEUE.name).indexCreate("crawlHostGroupKey_sequence_earliestFetch",
+        conn.exec(r.table(tableName).indexWait("executionId"));
+    }
+
+    private void createCrawledContentTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.CRAWLED_CONTENT.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName).optArg("primary_key", "digest"));
+    }
+
+    private void createStorageRefTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.STORAGE_REF.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName).optArg("primary_key", "warcId"));
+
+    }
+
+    private void createExtractedTextTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.EXTRACTED_TEXT.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName).optArg("primary_key", "warcId"));
+    }
+
+    private void createUriQueueTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.URI_QUEUE.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName));
+        conn.exec(r.table(tableName).indexCreate("surt"));
+        conn.exec(r.table(tableName).indexCreate("executionId"));
+        conn.exec(r.table(tableName).indexCreate("crawlHostGroupKey_sequence_earliestFetch",
                 uri -> r.array(uri.g("crawlHostGroupId"),
                         uri.g("politenessRef").g("id"),
                         uri.g("sequence"),
                         uri.g("earliestFetchTimeStamp"))));
 
-        conn.exec(r.tableCreate(Tables.EXECUTIONS.name));
-        conn.exec(r.table(Tables.EXECUTIONS.name).indexCreate("createdTime"));
-        conn.exec(r.table(Tables.EXECUTIONS.name).indexCreate("jobId"));
-        conn.exec(r.table(Tables.EXECUTIONS.name).indexCreate("state"));
-        conn.exec(r.table(Tables.EXECUTIONS.name).indexCreate("seedId"));
-        conn.exec(r.table(Tables.EXECUTIONS.name).indexCreate("jobExecutionId"));
+        conn.exec(r.table(tableName)
+                .indexWait("surt", "executionId", "crawlHostGroupKey_sequence_earliestFetch"));
+    }
 
-        conn.exec(r.tableCreate(Tables.JOB_EXECUTIONS.name));
-        conn.exec(r.table(Tables.JOB_EXECUTIONS.name).indexCreate("startTime"));
-        conn.exec(r.table(Tables.JOB_EXECUTIONS.name).indexCreate("jobId"));
-        conn.exec(r.table(Tables.JOB_EXECUTIONS.name).indexCreate("state"));
+    private void createCrawlExecutionsTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.EXECUTIONS.name;
+        if (tableExists(tableName)) return;
 
-        conn.exec(r.tableCreate(Tables.SCREENSHOT.name));
-        conn.exec(r.table(Tables.SCREENSHOT.name).indexCreate("executionId"));
+        LOG.info("Creating table {}", tableName);
 
-        conn.exec(r.tableCreate(Tables.CRAWL_ENTITIES.name));
+        conn.exec(r.tableCreate(tableName));
+        conn.exec(r.table(tableName).indexCreate("createdTime"));
+        conn.exec(r.table(tableName).indexCreate("jobId"));
+        conn.exec(r.table(tableName).indexCreate("state"));
+        conn.exec(r.table(tableName).indexCreate("seedId"));
+        conn.exec(r.table(tableName).indexCreate("jobExecutionId"));
 
-        conn.exec(r.tableCreate(Tables.SEEDS.name));
-        conn.exec(r.table(Tables.SEEDS.name)
+        conn.exec(r.table(tableName).indexWait("createdTime", "jobId", "state", "seedId", "jobExecutionId"));
+    }
+
+    private void createJobExecutionsTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.JOB_EXECUTIONS.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName));
+        conn.exec(r.table(tableName).indexCreate("startTime"));
+        conn.exec(r.table(tableName).indexCreate("jobId"));
+        conn.exec(r.table(tableName).indexCreate("state"));
+
+        conn.exec(r.table(tableName).indexWait("startTime", "jobId", "state"));
+    }
+
+    private void createCrawlEntitiesTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.CRAWL_ENTITIES.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName));
+        createMetaIndexes(Tables.CRAWL_ENTITIES);
+    }
+
+    private void createSeedsTable() throws DbQueryException, DbConnectionException {
+        String tableName = Tables.SEEDS.name;
+        if (tableExists(tableName)) return;
+
+        LOG.info("Creating table {}", tableName);
+
+        conn.exec(r.tableCreate(tableName));
+        conn.exec(r.table(tableName)
                 .indexCreate("configRefs", row -> row
                         .g(Kind.seed.name()).g("jobRef").map(d -> r.array(d.g("kind"), d.g("id")))
                         .add(r.array(row.g(Kind.seed.name()).g("entityRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
                 ).optArg("multi", true)
         );
-
-        conn.exec(r.tableCreate(Tables.CRAWL_HOST_GROUP.name));
-        conn.exec(r.table(Tables.CRAWL_HOST_GROUP.name).indexCreate("nextFetchTime"));
-
-        createMetaIndexes(
-                Tables.CONFIG,
-                Tables.CRAWL_ENTITIES,
-                Tables.SEEDS
-        );
-
-        conn.exec(r.table(Tables.URI_QUEUE.name)
-                .indexWait("surt", "executionId", "crawlHostGroupKey_sequence_earliestFetch"));
-        conn.exec(r.table(Tables.CRAWL_LOG.name).indexWait("surt_time", "executionId"));
-        conn.exec(r.table(Tables.PAGE_LOG.name).indexWait("executionId"));
-        conn.exec(r.table(Tables.SCREENSHOT.name).indexWait("executionId"));
-        conn.exec(r.table(Tables.CONFIG.name).indexWait("configRefs"));
-        conn.exec(r.table(Tables.SEEDS.name).indexWait("configRefs"));
-        conn.exec(r.table(Tables.CRAWL_HOST_GROUP.name).indexWait("nextFetchTime"));
-        conn.exec(r.table(Tables.EXECUTIONS.name).indexWait("createdTime", "jobId", "state", "seedId", "jobExecutionId"));
-        conn.exec(r.table(Tables.JOB_EXECUTIONS.name).indexWait("startTime", "jobId", "state"));
+        conn.exec(r.table(tableName).indexWait("configRefs"));
+        createMetaIndexes(Tables.SEEDS);
     }
 
     private final void createMetaIndexes(Tables... tables) throws DbQueryException, DbConnectionException {

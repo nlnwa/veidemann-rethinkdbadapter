@@ -22,7 +22,6 @@ public enum Tables {
     CRAWLED_CONTENT("crawled_content", CrawledContent.getDefaultInstance()),
     EXTRACTED_TEXT("extracted_text", ExtractedText.getDefaultInstance()),
     URI_QUEUE("uri_queue", QueuedUri.getDefaultInstance()),
-    SCREENSHOT("screenshot", Screenshot.getDefaultInstance()),
     EXECUTIONS("executions", CrawlExecutionStatus.getDefaultInstance()),
     JOB_EXECUTIONS("job_executions", JobExecutionStatus.getDefaultInstance()),
     CRAWL_HOST_GROUP("crawl_host_group", CrawlHostGroup.getDefaultInstance()),
