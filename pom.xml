@@ -44,7 +44,7 @@
         <dependency>
             <groupId>com.github.nlnwa</groupId>
             <artifactId>veidemann-commons</artifactId>
-            <version>0.3.4</version>
+            <version>0.3.7</version>
         </dependency>
         <dependency>
             <groupId>com.rethinkdb</groupId>

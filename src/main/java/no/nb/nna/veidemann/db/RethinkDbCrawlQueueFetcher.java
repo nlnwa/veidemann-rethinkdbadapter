@@ -20,12 +20,13 @@ import com.rethinkdb.RethinkDB;
 import com.rethinkdb.net.Cursor;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlHostGroup;
 import no.nb.nna.veidemann.api.frontier.v1.QueuedUri;
+import no.nb.nna.veidemann.commons.db.CrawlQueueFetcher;
+import no.nb.nna.veidemann.commons.db.CrawlableUri;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbQueryException;
 import no.nb.nna.veidemann.commons.db.DbService;
 import no.nb.nna.veidemann.commons.db.DistributedLock;
-import no.nb.nna.veidemann.commons.db.DistributedLock.Key;
 import no.nb.nna.veidemann.commons.db.FutureOptional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,7 @@ import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class RethinkDbCrawlQueueFetcher {
+public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
     private static final Logger LOG = LoggerFactory.getLogger(RethinkDbDistributedLock.class);
     private static final long RESCHEDULE_DELAY = 2000;
     private final long CHG_EXPIRATION_SECONDS = 1800;
@@ -80,6 +81,11 @@ public class RethinkDbCrawlQueueFetcher {
         return chg;
     }
 
+    @Override
+    public void setCurrentClientCount(int clientCount) {
+        prefetchSize = ((int) (1.2f * clientCount));
+    }
+
     public void setPrefetchSize(int size) {
         prefetchSize = size;
     }
@@ -95,7 +101,7 @@ public class RethinkDbCrawlQueueFetcher {
                 Map<String, Object> chgDoc = getNextCrawlHostGroup();
                 List chgId = (List) chgDoc.get("id");
 
-                DistributedLock lock = conn.createDistributedLock(createKey(chgId), LOCK_EXPIRATION_SECONDS);
+                DistributedLock lock = conn.createDistributedLock(RethinkDbCrawlQueueAdapter.createKey(chgId), LOCK_EXPIRATION_SECONDS);
                 if (lock.tryLock(3, TimeUnit.SECONDS)) {
                     try {
                         Map<String, Object> borrowResponse = conn.exec("db-borrowFirstReadyCrawlHostGroup",
@@ -181,7 +187,7 @@ public class RethinkDbCrawlQueueFetcher {
         return null;
     }
 
-    public FutureOptional<QueuedUri> getNextQueuedUriToFetch(CrawlHostGroup crawlHostGroup) throws DbException {
+    private FutureOptional<QueuedUri> getNextQueuedUriToFetch(CrawlHostGroup crawlHostGroup) throws DbException {
         List fromKey = r.array(
                 crawlHostGroup.getId(),
                 crawlHostGroup.getPolitenessId(),
@@ -261,32 +267,6 @@ public class RethinkDbCrawlQueueFetcher {
                 .optArg("read_mode", "majority")
                 .between(fromKey, toKey).optArg("index", "crawlHostGroupKey_sequence_earliestFetch")
                 .count());
-    }
-
-    private Key createKey(String crawlHostGroupId, String politenessId) {
-        return new Key("chg", crawlHostGroupId + ":" + politenessId);
-    }
-
-    private Key createKey(List<String> crawlHostGroupId) {
-        return new Key("chg", crawlHostGroupId.get(0) + ":" + crawlHostGroupId.get(1));
-    }
-
-    public static class CrawlableUri {
-        final CrawlHostGroup crawlHostGroup;
-        final QueuedUri uri;
-
-        public CrawlableUri(CrawlHostGroup crawlHostGroup, QueuedUri uri) {
-            this.crawlHostGroup = crawlHostGroup;
-            this.uri = uri;
-        }
-
-        public CrawlHostGroup getCrawlHostGroup() {
-            return crawlHostGroup;
-        }
-
-        public QueuedUri getUri() {
-            return uri;
-        }
     }
 
     static class IdWeight {

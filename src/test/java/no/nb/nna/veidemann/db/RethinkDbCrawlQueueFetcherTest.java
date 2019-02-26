@@ -17,6 +17,7 @@
 package no.nb.nna.veidemann.db;
 
 import com.rethinkdb.RethinkDB;
+import no.nb.nna.veidemann.db.RethinkDbCrawlQueueFetcher.IdWeight;
 import org.assertj.core.data.Percentage;
 import org.junit.Test;
 
@@ -25,15 +26,15 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class RethinkDbCrawlQueueAdapterTest {
+public class RethinkDbCrawlQueueFetcherTest {
     static final RethinkDB r = RethinkDB.r;
 
     @Test
     public void getWeightedRandomExecutionId() {
         Percentage allowedDifference = Percentage.withPercentage(10);
-        List<Map<String, Object>> executionIds = r.array(
-                r.hashMap("executionId", "eid1").with("priorityWeight", 1d),
-                r.hashMap("executionId", "eid2").with("priorityWeight", 1d)
+        List<IdWeight> executionIds = r.array(
+                new IdWeight("eid1", 1d),
+                new IdWeight("eid2", 1d)
         );
 
         Map<String, Integer> resultCounts = run10000Iterations(executionIds);
@@ -41,8 +42,8 @@ public class RethinkDbCrawlQueueAdapterTest {
         assertThat(resultCounts.get("eid2")).isCloseTo(5000, allowedDifference);
 
         executionIds = r.array(
-                r.hashMap("executionId", "eid1").with("priorityWeight", 1d),
-                r.hashMap("executionId", "eid2").with("priorityWeight", 2d)
+                new IdWeight("eid1", 1d),
+                new IdWeight("eid2", 2d)
         );
 
         resultCounts = run10000Iterations(executionIds);
@@ -50,9 +51,9 @@ public class RethinkDbCrawlQueueAdapterTest {
         assertThat(resultCounts.get("eid2")).isCloseTo(6666, allowedDifference);
 
         executionIds = r.array(
-                r.hashMap("executionId", "eid1").with("priorityWeight", 1d),
-                r.hashMap("executionId", "eid2").with("priorityWeight", 1d),
-                r.hashMap("executionId", "eid3").with("priorityWeight", 2d)
+                new IdWeight("eid1", 1d),
+                new IdWeight("eid2", 1d),
+                new IdWeight("eid3", 2d)
         );
 
         resultCounts = run10000Iterations(executionIds);
@@ -61,12 +62,12 @@ public class RethinkDbCrawlQueueAdapterTest {
         assertThat(resultCounts.get("eid3")).isCloseTo(5000, allowedDifference);
     }
 
-    private Map<String, Integer> run10000Iterations(List<Map<String, Object>> executionIds) {
+    private Map<String, Integer> run10000Iterations(List<IdWeight> executionIds) {
         Map<String, Integer> resultCounts = r.hashMap();
         for (int i = 0; i < 10000; i++) {
-            String result = RethinkDbCrawlQueueAdapter.getWeightedRandomExecutionId(executionIds);
+            IdWeight result = RethinkDbCrawlQueueFetcher.getWeightedRandomExecutionId(executionIds);
 
-            resultCounts.put(result, resultCounts.get(result) == null ? 1 : resultCounts.get(result) + 1);
+            resultCounts.put(result.id, resultCounts.get(result.id) == null ? 1 : resultCounts.get(result.id) + 1);
         }
         return resultCounts;
     }
