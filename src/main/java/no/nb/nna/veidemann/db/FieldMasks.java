@@ -249,21 +249,21 @@ public class FieldMasks {
                 return;
         }
 
-        if (e.descriptor.getType() == Type.MESSAGE) {
-            if (e.descriptor.isRepeated()) {
-                PathElem e2 = paths.get(e.fullName);
-                if (e2 == null) {
-                    p.put(e.name, ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object)));
-                } else if (e2.updateType == UpdateType.REPLACE) {
-                    p.put(e.name, ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object)));
-                } else if (e2.updateType == UpdateType.APPEND) {
-                    p.put(e.name, buildGetFieldExpression(e2, row).default_(r.array())
-                            .setUnion(ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object))));
-                } else {
-                    p.put(e.name, buildGetFieldExpression(e2, row).default_(r.array())
-                            .setDifference(ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object))));
-                }
-            } else if (e.descriptor.getMessageType() == Timestamp.getDescriptor()) {
+        if (e.descriptor.isRepeated()) {
+            PathElem e2 = paths.get(e.fullName);
+            if (e2 == null) {
+                p.put(e.name, ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object)));
+            } else if (e2.updateType == UpdateType.REPLACE) {
+                p.put(e.name, ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object)));
+            } else if (e2.updateType == UpdateType.APPEND) {
+                p.put(e.name, buildGetFieldExpression(e2, row).default_(r.array())
+                        .setUnion(ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object))));
+            } else {
+                p.put(e.name, buildGetFieldExpression(e2, row).default_(r.array())
+                        .setDifference(ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object))));
+            }
+        } else if (e.descriptor.getType() == Type.MESSAGE) {
+            if (e.descriptor.getMessageType() == Timestamp.getDescriptor()) {
                 p.put(e.name, ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object)));
             } else {
                 Map cp = r.hashMap();
