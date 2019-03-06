@@ -86,6 +86,15 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
         return ProtoUtils.rethinkToProto(response, ConfigObject.class);
     }
 
+    public boolean hasConfigObject(ConfigRef request) throws DbQueryException, DbConnectionException {
+        final Tables table = getTableForKind(request.getKind());
+
+        return conn.exec("db-getConfigObject",
+                r.table(table.name)
+                        .getAll(request.getId()).contains()
+        );
+    }
+
     @Override
     public ChangeFeed<ConfigObject> listConfigObjects(no.nb.nna.veidemann.api.config.v1.ListRequest request) throws DbQueryException, DbConnectionException {
         ListConfigObjectQueryBuilder q = new ListConfigObjectQueryBuilder(request);
@@ -119,6 +128,8 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
 
     @Override
     public UpdateResponse updateConfigObjects(UpdateRequest request) throws DbQueryException, DbConnectionException {
+        checkConfigRefKind(request.getUpdateTemplate());
+
         UpdateConfigObjectQueryBuilder q = new UpdateConfigObjectQueryBuilder(request);
 
         Map res = conn.exec("db-updateConfigObjects", q.getUpdateQuery());
@@ -708,6 +719,8 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
     private ConfigObject storeConfigObject(ConfigObject msg) throws DbException {
         final Tables table = getTableForKind(msg.getKind());
 
+        checkConfigRefKind(msg);
+
         FieldDescriptor metaField = msg.getDescriptorForType().findFieldByName("meta");
         Map rMap = ProtoUtils.protoToRethink(msg);
 
@@ -789,4 +802,54 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
         }
     }
 
+    void checkConfigRefKind(ConfigObject object) throws DbQueryException, DbConnectionException {
+        switch (object.getKind()) {
+            case crawlEntity:
+                break;
+            case seed:
+                checkConfigRefKind("entityRef", object.getSeed().getEntityRef(), Kind.crawlEntity);
+                for (ConfigRef cr : object.getSeed().getJobRefList()) {
+                    checkConfigRefKind("jobRef", cr, Kind.crawlJob);
+                }
+                break;
+            case crawlJob:
+                checkConfigRefKind("scheduleRef", object.getCrawlJob().getScheduleRef(), Kind.crawlScheduleConfig);
+                checkConfigRefKind("crawlConfigRef", object.getCrawlJob().getCrawlConfigRef(), Kind.crawlConfig);
+                break;
+            case crawlConfig:
+                checkConfigRefKind("collectionRef", object.getCrawlConfig().getCollectionRef(), Kind.collection);
+                checkConfigRefKind("browserConfigRef", object.getCrawlConfig().getBrowserConfigRef(), Kind.browserConfig);
+                checkConfigRefKind("politenessRef", object.getCrawlConfig().getPolitenessRef(), Kind.politenessConfig);
+            case crawlScheduleConfig:
+                break;
+            case browserConfig:
+                for (ConfigRef cr : object.getBrowserConfig().getScriptRefList()) {
+                    checkConfigRefKind("scriptRef", cr, Kind.browserScript);
+                }
+                break;
+            case politenessConfig:
+                break;
+            case browserScript:
+                break;
+            case crawlHostGroupConfig:
+                break;
+            case roleMapping:
+                break;
+            case collection:
+                break;
+        }
+
+    }
+
+    private void checkConfigRefKind(String fieldName, ConfigRef configRef, Kind expectedKind) throws DbQueryException, DbConnectionException {
+        if (configRef == ConfigRef.getDefaultInstance()) {
+            return;
+        }
+        if (configRef.getKind() != expectedKind) {
+            throw new IllegalArgumentException(fieldName + " has wrong kind: " + configRef.getKind());
+        }
+        if (!hasConfigObject(configRef)) {
+            throw new IllegalArgumentException("Reference with kind '" + configRef.getKind() + "' and id '" + configRef.getId() + "' doesn't exist");
+        }
+    }
 }

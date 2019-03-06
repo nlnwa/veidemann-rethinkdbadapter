@@ -73,6 +73,17 @@ public class PopulateDbWithDefaultData implements Runnable {
                         });
             }
             try (InputStream in = getClass().getClassLoader()
+                    .getResourceAsStream("default_objects/collection-configs.yaml")) {
+                readYamlFile(in, ConfigObject.class)
+                        .forEach(o -> {
+                            try {
+                                db.saveConfigObject(o);
+                            } catch (DbException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+            }
+            try (InputStream in = getClass().getClassLoader()
                     .getResourceAsStream("default_objects/crawl-configs.yaml")) {
                 readYamlFile(in, ConfigObject.class)
                         .forEach(o -> {
@@ -107,17 +118,6 @@ public class PopulateDbWithDefaultData implements Runnable {
             }
             try (InputStream in = getClass().getClassLoader()
                     .getResourceAsStream("default_objects/rolemappings.yaml")) {
-                readYamlFile(in, ConfigObject.class)
-                        .forEach(o -> {
-                            try {
-                                db.saveConfigObject(o);
-                            } catch (DbException e) {
-                                throw new RuntimeException(e);
-                            }
-                        });
-            }
-            try (InputStream in = getClass().getClassLoader()
-                    .getResourceAsStream("default_objects/collection-configs.yaml")) {
                 readYamlFile(in, ConfigObject.class)
                         .forEach(o -> {
                             try {
