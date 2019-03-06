@@ -482,19 +482,35 @@ public class RethinkDbExecutionsAdapterIT {
 
     @Test
     public void listCrawlExecutionStatus() throws DbException {
-        CrawlExecutionStatus ces1 = executionsAdapter.createCrawlExecutionStatus("jobId1", "jobExe1", "seedId", CrawlScope.getDefaultInstance());
-        CrawlExecutionStatus ces2 = executionsAdapter.createCrawlExecutionStatus("jobId1", "jobExe1", "seedId", CrawlScope.getDefaultInstance());
+        CrawlExecutionStatus ces1 = executionsAdapter.createCrawlExecutionStatus("jobId1", "jobExe1", "seedId1", CrawlScope.getDefaultInstance());
+        CrawlExecutionStatus ces2 = executionsAdapter.createCrawlExecutionStatus("jobId1", "jobExe1", "seedId2", CrawlScope.getDefaultInstance());
+        CrawlExecutionStatus ces3 = executionsAdapter.createCrawlExecutionStatus("jobId1", "jobExe2", "seedId1", CrawlScope.getDefaultInstance());
 
         // Check crawl executions list functions
         ExecutionsListReply eList = executionsAdapter.listCrawlExecutionStatus(ListExecutionsRequest.getDefaultInstance());
-        assertThat(eList.getCount()).isEqualTo(2);
-        assertThat(eList.getValueCount()).isEqualTo(2);
-        assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces1, ces2);
+        assertThat(eList.getCount()).isEqualTo(3);
+        assertThat(eList.getValueCount()).isEqualTo(3);
+        assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces1, ces2, ces3);
 
         eList = executionsAdapter.listCrawlExecutionStatus(ListExecutionsRequest.newBuilder().addId(ces2.getId()).build());
         assertThat(eList.getCount()).isEqualTo(1);
         assertThat(eList.getValueCount()).isEqualTo(1);
         assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces2);
+
+        eList = executionsAdapter.listCrawlExecutionStatus(ListExecutionsRequest.newBuilder().setJobExecutionId("jobExe1").build());
+        assertThat(eList.getCount()).isEqualTo(2);
+        assertThat(eList.getValueCount()).isEqualTo(2);
+        assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces1, ces2);
+
+        eList = executionsAdapter.listCrawlExecutionStatus(ListExecutionsRequest.newBuilder().setSeedId("seedId1").build());
+        assertThat(eList.getCount()).isEqualTo(2);
+        assertThat(eList.getValueCount()).isEqualTo(2);
+        assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces1, ces3);
+
+        eList = executionsAdapter.listCrawlExecutionStatus(ListExecutionsRequest.newBuilder().setJobExecutionId("jobExe1").setSeedId("seedId1").build());
+        assertThat(eList.getCount()).isEqualTo(1);
+        assertThat(eList.getValueCount()).isEqualTo(1);
+        assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces1);
     }
 
     @Test
