@@ -284,7 +284,8 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
             // Get a count of still running CrawlExecutions for this execution's JobExecution
             Long notEndedCount = conn.exec("db-updateJobExecution",
                     r.table(Tables.EXECUTIONS.name)
-                            .getAll(jobExecutionId).optArg("index", "jobExecutionId")
+                            .between(r.array(jobExecutionId, r.minval()), r.array(jobExecutionId, r.maxval()))
+                            .optArg("index", "jobExecutionIdSeedId")
                             .filter(row -> row.g("state").match("UNDEFINED|CREATED|FETCHING|SLEEPING"))
                             .count()
             );
@@ -430,7 +431,8 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
 
         return conn.exec("db-summarizeJobExecutionStats",
                 r.table(Tables.EXECUTIONS.name)
-                        .getAll(jobExecutionId).optArg("index", "jobExecutionId")
+                        .between(r.array(jobExecutionId, r.minval()), r.array(jobExecutionId, r.maxval()))
+                        .optArg("index", "jobExecutionIdSeedId")
                         .map(doc -> {
                                     MapObject m = r.hashMap();
                                     for (String f : EXECUTIONS_STAT_FIELDS) {

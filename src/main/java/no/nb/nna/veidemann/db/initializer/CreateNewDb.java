@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 public class CreateNewDb implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CreateNewDb.class);
 
-    public static final String DB_VERSION = "1.2";
+    public static final String DB_VERSION = "1.3";
 
     static final RethinkDB r = RethinkDB.r;
 
@@ -218,9 +218,11 @@ public class CreateNewDb implements Runnable {
         conn.exec(r.table(tableName).indexCreate("jobId"));
         conn.exec(r.table(tableName).indexCreate("state"));
         conn.exec(r.table(tableName).indexCreate("seedId"));
-        conn.exec(r.table(tableName).indexCreate("jobExecutionId"));
+        conn.exec(r.table(tableName).indexCreate("jobExecutionIdSeedId", row ->
+                r.array(row.g("jobExecutionId"), row.g("seedId"))
+        ));
 
-        conn.exec(r.table(tableName).indexWait("createdTime", "jobId", "state", "seedId", "jobExecutionId"));
+        conn.exec(r.table(tableName).indexWait("createdTime", "jobId", "state", "seedId", "jobExecutionIdSeedId"));
     }
 
     private void createJobExecutionsTable() throws DbQueryException, DbConnectionException {

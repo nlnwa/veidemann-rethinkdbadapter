@@ -39,15 +39,21 @@ public class CrawlExecutionsListRequestQueryBuilder extends ConfigListQueryBuild
             }
 
             if (!request.getJobExecutionId().isEmpty()) {
-                addQuery(r.table(table.name).getAll(request.getJobExecutionId()).optArg("index", "jobExecutionId"));
+                if (request.getSeedId().isEmpty()) {
+                    addQuery(r.table(table.name).between(
+                            r.array(request.getJobExecutionId(), r.minval()),
+                            r.array(request.getJobExecutionId(), r.maxval()))
+                            .optArg("index", "jobExecutionIdSeedId"));
+                } else {
+                    addQuery(r.table(table.name).getAll(r.array(request.getJobExecutionId(), request.getSeedId()))
+                            .optArg("index", "jobExecutionIdSeedId"));
+                }
+            } else if (!request.getSeedId().isEmpty()) {
+                addQuery(r.table(table.name).getAll(request.getSeedId()).optArg("index", "seedId"));
             }
 
             if (!request.getJobId().isEmpty()) {
                 addQuery(r.table(table.name).getAll(request.getJobId()).optArg("index", "jobId"));
-            }
-
-            if (!request.getSeedId().isEmpty()) {
-                addQuery(r.table(table.name).getAll(request.getSeedId()).optArg("index", "seedId"));
             }
         }
     }
