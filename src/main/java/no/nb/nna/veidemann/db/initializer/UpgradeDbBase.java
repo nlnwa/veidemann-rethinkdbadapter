@@ -15,28 +15,20 @@
  */
 package no.nb.nna.veidemann.db.initializer;
 
-import com.rethinkdb.RethinkDB;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbQueryException;
 import no.nb.nna.veidemann.commons.db.DbUpgradeException;
-import no.nb.nna.veidemann.db.Tables;
 import no.nb.nna.veidemann.db.RethinkDbConnection;
+import no.nb.nna.veidemann.db.Tables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class UpgradeDbBase implements Runnable {
+public abstract class UpgradeDbBase extends TableCreator implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(UpgradeDbBase.class);
 
-    static final RethinkDB r = RethinkDB.r;
-
-    final RethinkDbConnection conn;
-
-    final String dbName;
-
     public UpgradeDbBase(String dbName, RethinkDbConnection conn) {
-        this.dbName = dbName;
-        this.conn = conn;
+        super(dbName, conn);
     }
 
     @Override

@@ -27,16 +27,21 @@ public class Upgrade1_2To1_3 extends UpgradeDbBase {
     }
 
     final void upgrade() throws DbQueryException, DbConnectionException {
-        // create new compund jobExecutionId an seedId index
-        conn.exec(r.table(Tables.EXECUTIONS.name).indexCreate("jobExecutionIdSeedId", row ->
+        // create new compound jobExecutionId and seedId index for crawl executions table
+        createIndex(Tables.EXECUTIONS, "jobExecutionId_seedId", row ->
                 r.array(row.g("jobExecutionId"), row.g("seedId"))
-        ));
+        );
 
         // delete old jobExecutionId index
-        conn.exec(r.table(Tables.EXECUTIONS.name).indexDrop("jobExecutionId"));
+        deleteIndex(Tables.EXECUTIONS, "jobExecutionId");
 
-        // wait for new index creation to complete
-        conn.exec(r.table(Tables.EXECUTIONS.name).indexWait("jobExecutionIdSeedId"));
+        // create new compound seedId and createdTime index for craw executions table
+        createIndex(Tables.EXECUTIONS, "seedId_createdTime", row ->
+                r.array(row.g("seedId"), row.g("createdTime")));
+
+        // create new compound jobId and startTime index for job executions table
+        createIndex(Tables.JOB_EXECUTIONS, "jobId_startTime", row ->
+                r.array(row.g("jobId"), row.g("startTime")));
     }
 
     @Override

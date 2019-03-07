@@ -43,10 +43,10 @@ public class CrawlExecutionsListRequestQueryBuilder extends ConfigListQueryBuild
                     addQuery(r.table(table.name).between(
                             r.array(request.getJobExecutionId(), r.minval()),
                             r.array(request.getJobExecutionId(), r.maxval()))
-                            .optArg("index", "jobExecutionIdSeedId"));
+                            .optArg("index", "jobExecutionId_seedId"));
                 } else {
                     addQuery(r.table(table.name).getAll(r.array(request.getJobExecutionId(), request.getSeedId()))
-                            .optArg("index", "jobExecutionIdSeedId"));
+                            .optArg("index", "jobExecutionId_seedId"));
                 }
             } else if (!request.getSeedId().isEmpty()) {
                 addQuery(r.table(table.name).getAll(request.getSeedId()).optArg("index", "seedId"));

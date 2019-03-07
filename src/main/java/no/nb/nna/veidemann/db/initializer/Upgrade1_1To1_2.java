@@ -28,7 +28,7 @@ public class Upgrade1_1To1_2 extends UpgradeDbBase {
 
     final void upgrade() throws DbQueryException, DbConnectionException {
         // Create new StorageRef table
-        conn.exec(r.tableCreate(Tables.STORAGE_REF.name).optArg("primary_key", "warcId"));
+        createTable(Tables.STORAGE_REF, "warcId");
 
         // update crawled_content with TargetUri and Timestamp
         conn.exec(r.table(Tables.CRAWLED_CONTENT.name)
