@@ -15,7 +15,6 @@
  */
 package no.nb.nna.veidemann.db.initializer;
 
-import com.rethinkdb.RethinkDB;
 import no.nb.nna.veidemann.api.config.v1.Kind;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbException;
@@ -25,20 +24,13 @@ import no.nb.nna.veidemann.db.Tables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CreateNewDb implements Runnable {
+public class CreateNewDb extends TableCreator implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CreateNewDb.class);
 
     public static final String DB_VERSION = "1.3";
 
-    static final RethinkDB r = RethinkDB.r;
-
-    final RethinkDbConnection conn;
-
-    final String dbName;
-
     public CreateNewDb(String dbName, RethinkDbConnection conn) {
-        this.dbName = dbName;
-        this.conn = conn;
+        super(dbName, conn);
     }
 
     @Override
@@ -72,6 +64,8 @@ public class CreateNewDb implements Runnable {
         createCrawlEntitiesTable();
         createSeedsTable();
         createCrawlHostGroupTable();
+
+        waitForIndexes();
     }
 
     private boolean tableExists(String tableName) throws DbQueryException, DbConnectionException {
@@ -85,6 +79,7 @@ public class CreateNewDb implements Runnable {
         LOG.info("Creating table {}", tableName);
         conn.exec(r.tableCreate(tableName));
         conn.exec(r.table(tableName).insert(r.hashMap("id", "db_version").with("db_version", DB_VERSION)));
+        conn.exec(r.table(tableName).insert(r.hashMap("id", "state").with("shouldPause", false)));
         conn.exec(r.table(tableName).insert(r.hashMap("id", "log_levels")
                 .with("logLevel",
                         r.array(r.hashMap("logger", "no.nb.nna.veidemann").with("level", "INFO"))
@@ -92,203 +87,103 @@ public class CreateNewDb implements Runnable {
     }
 
     private void createConfigsTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.CONFIG.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName));
-        conn.exec(r.table(tableName)
-                .indexCreate("configRefs", row -> row
-                        .g(Kind.browserConfig.name()).g("scriptRef").map(d -> r.array(d.g("kind"), d.g("id")))
-                        .add(r.array(row.g(Kind.crawlJob.name()).g("scheduleRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
-                        .add(r.array(row.g(Kind.crawlJob.name()).g("crawlConfigRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
-                        .add(r.array(row.g(Kind.crawlConfig.name()).g("collectionRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
-                        .add(r.array(row.g(Kind.crawlConfig.name()).g("browserConfigRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
-                        .add(r.array(row.g(Kind.crawlConfig.name()).g("politenessRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
-                ).optArg("multi", true)
+        createTable(Tables.CONFIG);
+        createIndex(Tables.CONFIG, "configRefs", true, row -> row
+                .g(Kind.browserConfig.name()).g("scriptRef").map(d -> r.array(d.g("kind"), d.g("id")))
+                .add(r.array(row.g(Kind.crawlJob.name()).g("scheduleRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
+                .add(r.array(row.g(Kind.crawlJob.name()).g("crawlConfigRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
+                .add(r.array(row.g(Kind.crawlConfig.name()).g("collectionRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
+                .add(r.array(row.g(Kind.crawlConfig.name()).g("browserConfigRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
+                .add(r.array(row.g(Kind.crawlConfig.name()).g("politenessRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
         );
-
-        conn.exec(r.table(tableName).indexWait("configRefs"));
         createMetaIndexes(Tables.CONFIG);
     }
 
     private void createLocksTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.LOCKS.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName));
+        createTable(Tables.LOCKS);
     }
 
     private void createCrawlHostGroupTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.CRAWL_HOST_GROUP.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName));
-        conn.exec(r.table(tableName).indexCreate("nextFetchTime"));
-
-        conn.exec(r.table(tableName).indexWait("nextFetchTime"));
+        createTable(Tables.CRAWL_HOST_GROUP);
+        createIndex(Tables.CRAWL_HOST_GROUP, "nextFetchTime");
     }
 
     private void createCrawlLogTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.CRAWL_LOG.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName).optArg("primary_key", "warcId"));
-        conn.exec(r.table(tableName)
-                .indexCreate("surt_time", row -> r.array(row.g("surt"), row.g("timeStamp"))));
-        conn.exec(r.table(tableName).indexCreate("executionId"));
-
-        conn.exec(r.table(tableName).indexWait("surt_time", "executionId"));
+        createTable(Tables.CRAWL_LOG, "warcId");
+        createIndex(Tables.CRAWL_LOG, "executionId");
+        createIndex(Tables.CRAWL_LOG, "surt_time", row -> r.array(row.g("surt"), row.g("timeStamp")));
     }
 
     private void createPageLogTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.PAGE_LOG.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName).optArg("primary_key", "warcId"));
-        conn.exec(r.table(tableName).indexCreate("executionId"));
-
-        conn.exec(r.table(tableName).indexWait("executionId"));
+        createTable(Tables.PAGE_LOG, "warcId");
+        createIndex(Tables.PAGE_LOG, "executionId");
     }
 
     private void createCrawledContentTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.CRAWLED_CONTENT.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName).optArg("primary_key", "digest"));
+        createTable(Tables.CRAWLED_CONTENT, "digest");
     }
 
     private void createStorageRefTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.STORAGE_REF.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName).optArg("primary_key", "warcId"));
-
+        createTable(Tables.STORAGE_REF, "warcId");
     }
 
     private void createExtractedTextTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.EXTRACTED_TEXT.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName).optArg("primary_key", "warcId"));
+        createTable(Tables.EXTRACTED_TEXT, "warcId");
     }
 
     private void createUriQueueTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.URI_QUEUE.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName));
-        conn.exec(r.table(tableName).indexCreate("surt"));
-        conn.exec(r.table(tableName).indexCreate("executionId"));
-        conn.exec(r.table(tableName).indexCreate("crawlHostGroupKey_sequence_earliestFetch",
-                uri -> r.array(uri.g("crawlHostGroupId"),
-                        uri.g("politenessRef").g("id"),
-                        uri.g("sequence"),
-                        uri.g("earliestFetchTimeStamp"))));
-
-        conn.exec(r.table(tableName)
-                .indexWait("surt", "executionId", "crawlHostGroupKey_sequence_earliestFetch"));
+        createTable(Tables.URI_QUEUE);
+        createIndex(Tables.URI_QUEUE, "surt");
+        createIndex(Tables.URI_QUEUE, "executionId");
+        createIndex(Tables.URI_QUEUE, "crawlHostGroupKey_sequence_earliestFetch", uri -> r.array(uri.g("crawlHostGroupId"),
+                uri.g("politenessRef").g("id"),
+                uri.g("sequence"),
+                uri.g("earliestFetchTimeStamp")));
     }
 
     private void createCrawlExecutionsTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.EXECUTIONS.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName));
-        conn.exec(r.table(tableName).indexCreate("createdTime"));
-        conn.exec(r.table(tableName).indexCreate("jobId"));
-        conn.exec(r.table(tableName).indexCreate("state"));
-        conn.exec(r.table(tableName).indexCreate("seedId"));
-        conn.exec(r.table(tableName).indexCreate("jobExecutionIdSeedId", row ->
-                r.array(row.g("jobExecutionId"), row.g("seedId"))
-        ));
-
-        conn.exec(r.table(tableName).indexWait("createdTime", "jobId", "state", "seedId", "jobExecutionIdSeedId"));
+        createTable(Tables.EXECUTIONS);
+        createIndex(Tables.EXECUTIONS, "createdTime");
+        createIndex(Tables.EXECUTIONS, "jobId");
+        createIndex(Tables.EXECUTIONS, "state");
+        createIndex(Tables.EXECUTIONS, "seedId");
+        createIndex(Tables.EXECUTIONS, "jobExecutionId_seedId", row ->
+                r.array(row.g("jobExecutionId"), row.g("seedId")));
+        createIndex(Tables.EXECUTIONS, "seedId_createdTime", row ->
+                r.array(row.g("seedId"), row.g("createdTime")));
     }
 
     private void createJobExecutionsTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.JOB_EXECUTIONS.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName));
-        conn.exec(r.table(tableName).indexCreate("startTime"));
-        conn.exec(r.table(tableName).indexCreate("jobId"));
-        conn.exec(r.table(tableName).indexCreate("state"));
-
-        conn.exec(r.table(tableName).indexWait("startTime", "jobId", "state"));
+        createTable(Tables.JOB_EXECUTIONS);
+        createIndex(Tables.JOB_EXECUTIONS, "startTime");
+        createIndex(Tables.JOB_EXECUTIONS, "jobId");
+        createIndex(Tables.JOB_EXECUTIONS, "state");
+        createIndex(Tables.JOB_EXECUTIONS, "jobId_startTime", row ->
+                r.array(row.g("jobId"), row.g("startTime")));
     }
 
     private void createCrawlEntitiesTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.CRAWL_ENTITIES.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName));
+        createTable(Tables.CRAWL_ENTITIES);
         createMetaIndexes(Tables.CRAWL_ENTITIES);
     }
 
     private void createSeedsTable() throws DbQueryException, DbConnectionException {
-        String tableName = Tables.SEEDS.name;
-        if (tableExists(tableName)) return;
-
-        LOG.info("Creating table {}", tableName);
-
-        conn.exec(r.tableCreate(tableName));
-        conn.exec(r.table(tableName)
-                .indexCreate("configRefs", row -> row
-                        .g(Kind.seed.name()).g("jobRef").map(d -> r.array(d.g("kind"), d.g("id")))
-                        .add(r.array(row.g(Kind.seed.name()).g("entityRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
-                ).optArg("multi", true)
-        );
-        conn.exec(r.table(tableName).indexWait("configRefs"));
+        createTable(Tables.SEEDS);
+        createIndex(Tables.SEEDS, "configRefs", true, row -> row
+                .g(Kind.seed.name()).g("jobRef").map(d -> r.array(d.g("kind"), d.g("id")))
+                .add(r.array(row.g(Kind.seed.name()).g("entityRef").do_(d -> r.array(d.g("kind"), d.g("id"))))));
         createMetaIndexes(Tables.SEEDS);
     }
 
-    private final void createMetaIndexes(Tables... tables) throws DbQueryException, DbConnectionException {
-        for (Tables table : tables) {
-            conn.exec(r.table(table.name).indexCreate("name", row -> row.g("meta").g("name").downcase()));
-            conn.exec(r.table(table.name)
-                    .indexCreate("label",
-                            row -> row.g("meta").g("label").map(
-                                    label -> r.array(label.g("key").downcase(), label.g("value").downcase())))
-                    .optArg("multi", true));
-            conn.exec(r.table(table.name)
-                    .indexCreate("kind_label_key",
-                            row -> row.g("meta").g("label").map(
-                                    label -> r.array(row.g("kind"), label.g("key").downcase())))
-                    .optArg("multi", true));
-            conn.exec(r.table(table.name)
-                    .indexCreate("label_value",
-                            row -> row.g("meta").g("label").map(
-                                    label -> label.g("value").downcase()))
-                    .optArg("multi", true));
-            conn.exec(r.table(table.name).indexCreate("lastModified", row -> row.g("meta").g("lastModified")));
-            conn.exec(r.table(table.name).indexCreate("lastModifiedBy", row -> row.g("meta").g("lastModifiedBy").downcase()));
-        }
-        for (Tables table : tables) {
-            conn.exec(r.table(table.name).indexWait("name", "label", "kind_label_key", "label_value", "lastModified", "lastModifiedBy"));
-        }
+    private final void createMetaIndexes(Tables table) throws DbQueryException, DbConnectionException {
+        createIndex(table, "name", row -> row.g("meta").g("name").downcase());
+        createIndex(table, "label", true, row -> row.g("meta").g("label").map(
+                label -> r.array(label.g("key").downcase(), label.g("value").downcase())));
+        createIndex(table, "kind_label_key", true, row -> row.g("meta").g("label").map(
+                label -> r.array(row.g("kind"), label.g("key").downcase())));
+        createIndex(table, "label_value", true, row -> row.g("meta").g("label").map(
+                label -> label.g("value").downcase()));
+        createIndex(table, "lastModified", row -> row.g("meta").g("lastModified"));
+        createIndex(table, "lastModifiedBy", row -> row.g("meta").g("lastModifiedBy").downcase());
     }
 }
