@@ -128,7 +128,7 @@ public class DbInitializerTestIT {
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name, Tables.SEEDS.name,
                 Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
                 Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
-                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name);
+                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
         List<String> indexes = db.executeRequest("", r.table(Tables.CONFIG.name).indexList());
         assertThat(indexes).containsOnly("configRefs", "kind_label_key", "label", "label_value", "lastModified", "lastModifiedBy", "name");
@@ -140,7 +140,7 @@ public class DbInitializerTestIT {
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name,
                 Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
                 Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
-                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name);
+                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
         indexes = db.executeRequest("", r.table(Tables.CONFIG.name).indexList());
         assertThat(indexes).containsOnly("kind_label_key", "label", "label_value", "lastModified", "lastModifiedBy", "name");
@@ -151,7 +151,7 @@ public class DbInitializerTestIT {
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name, Tables.SEEDS.name,
                 Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
                 Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
-                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name);
+                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
         indexes = db.executeRequest("", r.table(Tables.CONFIG.name).indexList());
         assertThat(indexes).containsOnly("configRefs", "kind_label_key", "label", "label_value", "lastModified", "lastModifiedBy", "name");

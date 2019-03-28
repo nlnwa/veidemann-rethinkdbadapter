@@ -42,6 +42,7 @@ public abstract class UpgradeDbBase extends TableCreator implements Runnable {
             }
 
             upgrade();
+            waitForIndexes();
             conn.exec(r.table(Tables.SYSTEM.name).get("db_version").update(r.hashMap("db_version", toVersion())));
         } catch (DbException e) {
             throw new RuntimeException(e);

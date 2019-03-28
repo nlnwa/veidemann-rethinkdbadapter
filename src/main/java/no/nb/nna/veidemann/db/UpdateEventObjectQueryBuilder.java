@@ -2,12 +2,14 @@ package no.nb.nna.veidemann.db;
 
 import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.ReqlFunction1;
-import no.nb.nna.veidemann.api.config.v1.UpdateRequest;
+import no.nb.nna.veidemann.api.eventhandler.v1.UpdateRequest;
 import no.nb.nna.veidemann.commons.auth.EmailContextKey;
+import no.nb.nna.veidemann.db.fieldmask.EventObjectQueryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.rethinkdb.RethinkDB.r;
+import static no.nb.nna.veidemann.db.RethinkDbEventAdapter.buildOptargConflictFunction;
 
 public class UpdateEventObjectQueryBuilder {
     private static final Logger LOG = LoggerFactory.getLogger(UpdateEventObjectQueryBuilder.class);
@@ -16,15 +18,15 @@ public class UpdateEventObjectQueryBuilder {
 
     public UpdateEventObjectQueryBuilder(UpdateRequest request) {
         ListEventObjectQueryBuilder l = new ListEventObjectQueryBuilder(request.getListRequest());
-        q = l.getSelectorForUpdateQuery();
+        q = l.getSelectForUpdateQuery();
 
         ReqlFunction1 updateDoc;
         if (request.hasUpdateMask()) {
-            updateDoc = FieldMasks.createForFieldMaskProto(request.getUpdateMask())
-                    .buildUpdateQuery(request.getListRequest(), request.getUpdateTemplate());
+            updateDoc = new EventObjectQueryBuilder(request.getUpdateMask())
+                    .buildUpdateQuery(request.getUpdateTemplate());
         } else {
-            updateDoc = FieldMasks.CONFIG_OBJECT_DEF
-                    .buildUpdateQuery(request.getListRequest(), request.getUpdateTemplate());
+            updateDoc = new EventObjectQueryBuilder()
+                    .buildUpdateQuery(request.getUpdateTemplate());
         }
 
         String user;
@@ -34,16 +36,15 @@ public class UpdateEventObjectQueryBuilder {
             user = EmailContextKey.email();
         }
 
-        q  =  q.merge(updateDoc)
+        q = q.merge(updateDoc)
                 .forEach(doc -> r.table(l.table.name)
                         .insert(doc)
-                        .optArg("conflict",
-                                (id, old_doc, new_doc) -> r.branch(
-                                        old_doc.eq(new_doc),
-                                        old_doc,
-                                        new_doc.merge(
-                                          r.hashMap()
-                                        ))
-                                ))
+                        // A rethink function which keeps old values for fields not allowed to be changed and updates activity log
+                        .optArg("conflict", buildOptargConflictFunction(request.getComment()))
+                );
+    }
+
+    public ReqlExpr getUpdateQuery() {
+        return q;
     }
 }

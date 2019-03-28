@@ -19,6 +19,7 @@ package no.nb.nna.veidemann.db;
 import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.Table;
 import no.nb.nna.veidemann.api.config.v1.ListRequest;
+import no.nb.nna.veidemann.db.fieldmask.ConfigObjectQueryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +29,7 @@ import static com.rethinkdb.RethinkDB.r;
 
 public class ListConfigObjectQueryBuilder {
     private static final Logger LOG = LoggerFactory.getLogger(ListConfigObjectQueryBuilder.class);
+    private static final ConfigObjectQueryBuilder NO_MASK_BUILDER = new ConfigObjectQueryBuilder();
 
     private ReqlExpr q;
     private final ListRequest request;
@@ -46,10 +48,10 @@ public class ListConfigObjectQueryBuilder {
         if (!request.getOrderByPath().isEmpty()) {
             if (request.getOrderDescending()) {
                 q = q.orderBy().optArg("index",
-                        r.desc(FieldMasks.getSortIndexForPath(request.getOrderByPath())));
+                        r.desc(NO_MASK_BUILDER.getSortIndexForPath(request.getOrderByPath())));
             } else {
                 q = q.orderBy().optArg("index",
-                        r.asc(FieldMasks.getSortIndexForPath(request.getOrderByPath())));
+                        r.asc(NO_MASK_BUILDER.getSortIndexForPath(request.getOrderByPath())));
             }
         }
 
@@ -75,8 +77,8 @@ public class ListConfigObjectQueryBuilder {
         }
 
         if (request.hasQueryTemplate() && request.hasQueryMask()) {
-            FieldMasks fm = FieldMasks.createForFieldMaskProto(request.getQueryMask());
-            q = q.filter(fm.buildFilterQuery(request.getQueryTemplate()));
+            ConfigObjectQueryBuilder queryBuilder = new ConfigObjectQueryBuilder(request.getQueryMask());
+            q = q.filter(queryBuilder.buildFilterQuery(request.getQueryTemplate()));
         }
     }
 
@@ -84,8 +86,8 @@ public class ListConfigObjectQueryBuilder {
         ReqlExpr query = q;
 
         if (request.hasReturnedFieldsMask()) {
-            FieldMasks fm = FieldMasks.createForFieldMaskProto(request.getReturnedFieldsMask());
-            query = query.pluck(fm.createPluckQuery());
+            ConfigObjectQueryBuilder queryBuilder = new ConfigObjectQueryBuilder(request.getReturnedFieldsMask());
+            query = query.pluck(queryBuilder.createPluckQuery());
         }
 
         if (request.getPageSize() > 0 || request.getOffset() > 0) {

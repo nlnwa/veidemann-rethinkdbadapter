@@ -2,10 +2,10 @@ package no.nb.nna.veidemann.db;
 
 import com.google.protobuf.Message;
 import no.nb.nna.veidemann.api.MessagesProto.ExtractedText;
-import no.nb.nna.veidemann.api.MessagesProto.Screenshot;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject;
 import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
 import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
+import no.nb.nna.veidemann.api.eventhandler.v1.EventObject;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlHostGroup;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
@@ -27,7 +27,8 @@ public enum Tables {
     CRAWL_HOST_GROUP("crawl_host_group", CrawlHostGroup.getDefaultInstance()),
     CRAWL_ENTITIES("config_crawl_entities", ConfigObject.getDefaultInstance()),
     SEEDS("config_seeds", ConfigObject.getDefaultInstance()),
-    STORAGE_REF("storage_ref", StorageRef.getDefaultInstance());
+    STORAGE_REF("storage_ref", StorageRef.getDefaultInstance()),
+    EVENTS("events", EventObject.getDefaultInstance());
 
     public final String name;
 

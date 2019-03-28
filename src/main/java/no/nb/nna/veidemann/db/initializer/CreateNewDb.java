@@ -64,6 +64,7 @@ public class CreateNewDb extends TableCreator implements Runnable {
         createCrawlEntitiesTable();
         createSeedsTable();
         createCrawlHostGroupTable();
+        createEventTable();
 
         waitForIndexes();
     }
@@ -173,6 +174,14 @@ public class CreateNewDb extends TableCreator implements Runnable {
                 .g(Kind.seed.name()).g("jobRef").map(d -> r.array(d.g("kind"), d.g("id")))
                 .add(r.array(row.g(Kind.seed.name()).g("entityRef").do_(d -> r.array(d.g("kind"), d.g("id"))))));
         createMetaIndexes(Tables.SEEDS);
+    }
+
+    private void createEventTable() throws DbQueryException, DbConnectionException {
+        createTable(Tables.EVENTS);
+        createIndex(Tables.EVENTS, "state_lastModified", e -> r.array(e.g("state"), e.g("activity").nth(0).g("modifiedTime")));
+        createIndex(Tables.EVENTS, "assignee_lastModified", e -> r.array(e.g("assignee"), e.g("activity").nth(0).g("modifiedTime")));
+        createIndex(Tables.EVENTS, "label", true);
+        createIndex(Tables.EVENTS, "lastModified", e -> e.g("activity").nth(0).g("modifiedTime"));
     }
 
     private final void createMetaIndexes(Tables table) throws DbQueryException, DbConnectionException {
