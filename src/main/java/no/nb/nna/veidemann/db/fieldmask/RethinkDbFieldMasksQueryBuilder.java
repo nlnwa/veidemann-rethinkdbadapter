@@ -70,7 +70,7 @@ public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder
     }
 
     private void innerCreatePluckQuery(List p, PathElem<T> e) {
-        if (e.isTarget) {
+        if (maskedObject.getPathDef(e.fullName) != null) {
             p.add(e.name);
         } else {
             List cp = r.array();
@@ -147,12 +147,16 @@ public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder
                         .setDifference(ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object))));
             }
         } else if (e.descriptor.getType() == Type.MESSAGE) {
-            if (e.descriptor.getMessageType() == Timestamp.getDescriptor()) {
-                p.put(e.name, ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object)));
+            if (e.descriptor.isRepeated() || e.parent.name.isEmpty() || ((MessageOrBuilder) e.parent.getValue(object)).hasField(e.descriptor)) {
+                if (e.descriptor.getMessageType() == Timestamp.getDescriptor()) {
+                    p.put(e.name, ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object)));
+                } else {
+                    Map cp = r.hashMap();
+                    p.put(e.name, cp);
+                    e.children.forEach(c -> innerBuildUpdateQuery(row, cp, c, object));
+                }
             } else {
-                Map cp = r.hashMap();
-                p.put(e.name, cp);
-                e.children.forEach(c -> innerBuildUpdateQuery(row, cp, c, object));
+                p.put(e.name, null);
             }
         } else {
             p.put(e.name, ProtoUtils.protoFieldToRethink(e.descriptor, e.getValue(object)));

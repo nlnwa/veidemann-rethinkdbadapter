@@ -21,10 +21,12 @@ import no.nb.nna.veidemann.api.commons.v1.FieldMask;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 public class MaskedObject<T extends MessageOrBuilder> implements ObjectOrMask<T> {
-    final static PathElem EMPTY_PATH_ELEM = new PathElem(null, null, null);
     private final ObjectPathAccessor<T> objectDef;
     private final PathElem<T> masks;
     private Map<String, PathElem<T>> paths = new HashMap<>();
@@ -36,7 +38,27 @@ public class MaskedObject<T extends MessageOrBuilder> implements ObjectOrMask<T>
 
     MaskedObject(ObjectPathAccessor<T> objectDef, FieldMask mask) {
         this(objectDef);
+
+        // Reduce paths to only contain the shortest unique paths
+        Set<String> nonOverlappingMasks = new HashSet<>();
         for (String p : mask.getPathsList()) {
+            boolean shouldAdd = true;
+            for (Iterator<String> it = nonOverlappingMasks.iterator(); it.hasNext(); ) {
+                String em = it.next();
+                if (p.startsWith(em)) {
+                    shouldAdd = false;
+                    break;
+                }
+                if (em.startsWith(p)) {
+                    it.remove();
+                }
+            }
+            if (shouldAdd) {
+                nonOverlappingMasks.add(p);
+            }
+        }
+
+        for (String p : nonOverlappingMasks) {
             parseMask(p);
         }
     }
@@ -70,7 +92,6 @@ public class MaskedObject<T extends MessageOrBuilder> implements ObjectOrMask<T>
             fullName += ".";
         }
         if (e != null) {
-            e.isTarget = true;
             if (e.descriptor.isRepeated()) {
                 e.updateType = updateType;
             }

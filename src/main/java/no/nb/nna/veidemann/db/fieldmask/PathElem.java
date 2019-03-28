@@ -29,7 +29,6 @@ class PathElem<T extends MessageOrBuilder> {
     String name;
     String fullName;
     boolean isRepeated;
-    boolean isTarget;
     PathElem<T> parent;
     final List<PathElem<T>> children = new ArrayList<>();
     FieldDescriptor descriptor;

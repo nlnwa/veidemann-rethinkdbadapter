@@ -56,7 +56,8 @@ public class ConfigObjectQueryBuilderTest {
         ConfigObjectQueryBuilder queryBuilder = new ConfigObjectQueryBuilder(m);
         List q = queryBuilder.createPluckQuery();
 
-        assertThat(q).hasToString("[apiVersion, kind, id, meta, {crawlConfig=[{extra=[extractText]}, priorityWeight]}]");
+        assertThat(q).containsExactlyInAnyOrder("apiVersion", "kind", "id", "meta",
+                r.hashMap("crawlConfig", r.array(r.hashMap("extra", r.array("extractText")), "priorityWeight")));
     }
 
     @Test
@@ -118,7 +119,7 @@ public class ConfigObjectQueryBuilderTest {
         String decompiled = dc.toString();
 
         ReqlExpr expected = r.table("table").insert((ReqlFunction1) row ->
-                r.hashMap("crawlConfig", r.hashMap("priorityWeight", 2.0).with("extra", r.hashMap("extractText", false)))
+                r.hashMap("crawlConfig", r.hashMap("priorityWeight", 2.0).with("extra", null))
                         .with("meta", r.hashMap("name", "").with("description", "").with("label", r.array()))
         ).optArg("conflict", (id, old_doc, new_doc) -> r.branch(
                 old_doc.eq(new_doc),
