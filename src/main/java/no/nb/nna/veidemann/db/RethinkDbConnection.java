@@ -37,6 +37,7 @@ import no.nb.nna.veidemann.commons.db.DbQueryException;
 import no.nb.nna.veidemann.commons.db.DbServiceSPI;
 import no.nb.nna.veidemann.commons.db.DistributedLock;
 import no.nb.nna.veidemann.commons.db.DistributedLock.Key;
+import no.nb.nna.veidemann.commons.db.EventAdapter;
 import no.nb.nna.veidemann.commons.db.ExecutionsAdapter;
 import no.nb.nna.veidemann.commons.settings.CommonSettings;
 import no.nb.nna.veidemann.db.initializer.RethinkDbInitializer;
@@ -66,6 +67,8 @@ public class RethinkDbConnection implements DbServiceSPI {
     private RethinkDbCrawlQueueAdapter queueAdapter;
 
     private RethinkDbExecutionsAdapter executionsAdapter;
+
+    private RethinkDbEventAdapter eventAdapter;
 
     private RethinkDbInitializer dbInitializer;
 
@@ -195,6 +198,11 @@ public class RethinkDbConnection implements DbServiceSPI {
     }
 
     @Override
+    public EventAdapter getEventAdapter() {
+        return eventAdapter;
+    }
+
+    @Override
     public DbInitializer getDbInitializer() {
         return dbInitializer;
     }
@@ -222,6 +230,7 @@ public class RethinkDbConnection implements DbServiceSPI {
         configAdapter = new RethinkDbConfigAdapter(this);
         queueAdapter = new RethinkDbCrawlQueueAdapter(this);
         executionsAdapter = new RethinkDbExecutionsAdapter(this);
+        eventAdapter = new RethinkDbEventAdapter(this);
         dbInitializer = new RethinkDbInitializer(this);
     }
 

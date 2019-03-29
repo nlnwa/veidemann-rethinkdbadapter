@@ -37,6 +37,7 @@ import no.nb.nna.veidemann.api.ControllerProto.SeedListReply;
 import no.nb.nna.veidemann.api.ControllerProto.SeedListRequest;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject.SpecCase;
+import no.nb.nna.veidemann.api.config.v1.ConfigObjectOrBuilder;
 import no.nb.nna.veidemann.api.config.v1.ConfigRef;
 import no.nb.nna.veidemann.api.config.v1.DeleteResponse;
 import no.nb.nna.veidemann.api.config.v1.GetLabelKeysRequest;
@@ -52,6 +53,7 @@ import no.nb.nna.veidemann.commons.db.ConfigAdapter;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbQueryException;
+import no.nb.nna.veidemann.db.fieldmask.ObjectPathAccessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +63,8 @@ import java.util.function.Function;
 
 public class RethinkDbConfigAdapter implements ConfigAdapter {
     private static final Logger LOG = LoggerFactory.getLogger(RethinkDbConfigAdapter.class);
+
+    private static final ObjectPathAccessor<ConfigObjectOrBuilder> OBJECT_PATH_ACCESSOR = new ObjectPathAccessor<>(ConfigObject.class);
 
     static final RethinkDB r = RethinkDB.r;
 
@@ -787,9 +791,8 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
 
         no.nb.nna.veidemann.api.config.v1.ListRequest.Builder request = no.nb.nna.veidemann.api.config.v1.ListRequest.newBuilder()
                 .setKind(dependentKind);
-        FieldMasks.setValue(dependentFieldName, request.getQueryTemplateBuilder(),
-                ConfigRef.newBuilder().setKind(messageToCheck.getKind()).setId(messageToCheck.getId()).build()
-        );
+        OBJECT_PATH_ACCESSOR.setValue(dependentFieldName, request.getQueryTemplateBuilder(),
+                ConfigRef.newBuilder().setKind(messageToCheck.getKind()).setId(messageToCheck.getId()).build());
         request.getQueryMaskBuilder().addPaths(dependentFieldName);
 
         long dependencyCount = conn.exec("db-checkDependency",

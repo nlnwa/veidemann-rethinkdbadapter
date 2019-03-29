@@ -497,7 +497,7 @@ public class RethinkDbConfigAdapterIT {
                     assertThat(r.getCrawlScheduleConfig().getCronExpression()).isEqualTo("newestCron");
                 });
 
-        // Check update of crawlHostGroupSelector fro politenessConfig
+        // Check update of crawlHostGroupSelector for politenessConfig
         UpdateRequest.Builder ur4 = UpdateRequest.newBuilder();
         ur4.getListRequestBuilder()
                 .setKind(politenessConfig)
@@ -525,6 +525,38 @@ public class RethinkDbConfigAdapterIT {
                     assertThat(r.getMeta().getName()).isEqualTo("pc1");
                     assertThat(r.getMeta().getDescription()).isEqualTo("desc6");
                     assertThat(r.getPolitenessConfig().getCrawlHostGroupSelectorList()).containsOnly("sel1", "sel2");
+                });
+
+        // Check removal of object (timestamp)
+        ConfigObject.Builder csc4 = ConfigObject.newBuilder()
+                .setApiVersion("v1")
+                .setKind(crawlScheduleConfig);
+        csc4.getMetaBuilder()
+                .setName("csc4")
+                .setDescription("desc4")
+                .addLabelBuilder().setKey("foo").setValue("bar");
+        csc4.getMetaBuilder().addLabelBuilder().setKey("aaa").setValue("bbb");
+        csc4.getCrawlScheduleConfigBuilder()
+                .setCronExpression("cron4")
+                .setValidTo(ProtoUtils.getNowTs());
+        configAdapter.saveConfigObject(csc4.build());
+
+        UpdateRequest.Builder ur5 = UpdateRequest.newBuilder();
+        ur5.getListRequestBuilder()
+                .setKind(crawlScheduleConfig)
+                .setNameRegex("^csc.*");
+        ur5.getUpdateMaskBuilder()
+                .addPaths("crawlScheduleConfig.validFrom")
+                .addPaths("crawlScheduleConfig.validTo");
+
+        assertThat(configAdapter.updateConfigObjects(ur5.build()).getUpdated()).isEqualTo(1);
+
+        ListRequest.Builder test3 = ListRequest.newBuilder()
+                .setKind(crawlScheduleConfig);
+        assertThat(configAdapter.listConfigObjects(test3.build()).stream())
+                .allSatisfy(r -> {
+                    assertThat(r.getCrawlScheduleConfig().hasValidFrom()).isFalse();
+                    assertThat(r.getCrawlScheduleConfig().hasValidTo()).isFalse();
                 });
     }
 

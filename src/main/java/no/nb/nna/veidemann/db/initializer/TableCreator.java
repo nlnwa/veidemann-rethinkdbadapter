@@ -66,15 +66,18 @@ public class TableCreator {
     }
 
     void createIndex(Tables table, String indexName) throws DbQueryException, DbConnectionException {
+        createIndex(table, indexName, false);
+    }
+
+    void createIndex(Tables table, String indexName, boolean multi) throws DbQueryException, DbConnectionException {
         if (!tableExists(table)) return;
         if (indexExists(table, indexName)) return;
         LOG.info("Creating index {} on table {}", indexName, table.name);
-        conn.exec(r.table(table.name).indexCreate(indexName));
+        conn.exec(r.table(table.name).indexCreate(indexName).optArg("multi", multi));
         createdIndexes.computeIfAbsent(table, k -> new ArrayList<>()).add(indexName);
     }
 
     void createIndex(Tables table, String indexName, ReqlFunction1 func1) throws DbQueryException, DbConnectionException {
-        if (!tableExists(table)) return;
         createIndex(table, indexName, false, func1);
     }
 
@@ -102,8 +105,8 @@ public class TableCreator {
     }
 
     void waitForIndexes() throws DbQueryException, DbConnectionException {
-        for (Entry<Tables, List<String>> t : createdIndexes.entrySet()){
-                conn.exec(r.table(t.getKey().name).indexWait(r.args(t.getValue())));
+        for (Entry<Tables, List<String>> t : createdIndexes.entrySet()) {
+            conn.exec(r.table(t.getKey().name).indexWait(r.args(t.getValue())));
         }
     }
 }

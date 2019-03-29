@@ -20,6 +20,7 @@ import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.ReqlFunction1;
 import no.nb.nna.veidemann.api.config.v1.UpdateRequest;
 import no.nb.nna.veidemann.commons.auth.EmailContextKey;
+import no.nb.nna.veidemann.db.fieldmask.ConfigObjectQueryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,11 +37,11 @@ public class UpdateConfigObjectQueryBuilder {
 
         ReqlFunction1 updateDoc;
         if (request.hasUpdateMask()) {
-            updateDoc = FieldMasks.createForFieldMaskProto(request.getUpdateMask())
-                    .buildUpdateQuery(request.getListRequest().getKind(), request.getUpdateTemplate());
+            updateDoc = new ConfigObjectQueryBuilder(request.getUpdateMask())
+                    .buildUpdateQuery(request.getUpdateTemplate());
         } else {
-            updateDoc = FieldMasks.CONFIG_OBJECT_DEF
-                    .buildUpdateQuery(request.getListRequest().getKind(), request.getUpdateTemplate());
+            updateDoc = new ConfigObjectQueryBuilder()
+                    .buildUpdateQuery(request.getUpdateTemplate());
         }
 
         String user;
