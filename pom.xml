@@ -10,11 +10,10 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
         <docker.tag>latest</docker.tag>
 
-        <docker.java.image>openjdk:8-jdk-alpine</docker.java.image>
         <initializer.image.name>veidemann-db-initializer</initializer.image.name>
         <log4j.version>2.7</log4j.version>
 
@@ -44,7 +43,7 @@
         <dependency>
             <groupId>com.github.nlnwa</groupId>
             <artifactId>veidemann-commons</artifactId>
-            <version>0.3.10</version>
+            <version>0.3.11</version>
         </dependency>
         <dependency>
             <groupId>com.rethinkdb</groupId>
@@ -110,7 +109,7 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>2.13.0</version>
+            <version>2.27.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -129,10 +128,73 @@
                     </archive>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>1.2.0</version>
+                <configuration>
+                    <to>
+                        <image>docker.io/norsknettarkiv/${initializer.image.name}</image>
+                        <tags>
+                            <tag>${docker.tag}</tag>
+                        </tags>
+                        <auth>
+                            <username>${env.DOCKER_USERNAME}</username>
+                            <password>${env.DOCKER_PASSWORD}</password>
+                        </auth>
+                    </to>
+                    <container>
+                        <ports>
+                            <port>50051</port>
+                        </ports>
+                        <jvmFlags>
+                            <jvmFlag>-Dfile.encoding=UTF-8</jvmFlag>
+                        </jvmFlags>
+                    </container>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
     <profiles>
+        <profile>
+            <id>docker-build</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.google.cloud.tools</groupId>
+                        <artifactId>jib-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>dockerBuild</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>docker-build-and-push</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.google.cloud.tools</groupId>
+                        <artifactId>jib-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>integration-tests</id>
             <build>
@@ -207,123 +269,6 @@
                                 <db.host>${db.host}</db.host>
                                 <db.port>${db.port}</db.port>
                             </systemPropertyVariables>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <!-- Builds db initializer which is meant to be run before apllication is started -->
-        <profile>
-            <id>docker-build</id>
-            <build>
-                <plugins>
-                    <!-- Create assembly with startup scripts and dependencies -->
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>appassembler-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>assemble</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <licenseHeaderFile>${basedir}/src/main/etc/license-header.txt</licenseHeaderFile>
-                            <programs>
-                                <program>
-                                    <mainClass>no.nb.nna.veidemann.db.initializer.Main</mainClass>
-                                    <id>${initializer.image.name}</id>
-                                </program>
-                            </programs>
-                            <binFolder>bin</binFolder>
-                            <repositoryName>lib</repositoryName>
-                            <repositoryLayout>flat</repositoryLayout>
-                            <configurationDirectory>config</configurationDirectory>
-                            <endorsedDir>plugins</endorsedDir>
-                            <preAssembleDirectory>src/main/distfiles</preAssembleDirectory>
-                            <extraJvmArguments>-Dconfig.file=@BASEDIR@/config/application.conf
-                                -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap
-                            </extraJvmArguments>
-                        </configuration>
-                    </plugin>
-
-                    <!-- Build Docker image -->
-                    <plugin>
-                        <groupId>io.fabric8</groupId>
-                        <artifactId>docker-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>docker-build</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>build</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <images>
-                                <image>
-                                    <name>norsknettarkiv/${initializer.image.name}</name>
-                                    <alias>db-initializer</alias>
-                                    <build>
-                                        <from>${docker.java.image}</from>
-                                        <maintainer>National Library of Norway</maintainer>
-                                        <tags>
-                                            <tag>${docker.tag}</tag>
-                                        </tags>
-                                        <ports>
-                                            <port>50051</port>
-                                        </ports>
-                                        <cmd>
-                                            <exec>
-                                                <arg>/veidemann/bin/${initializer.image.name}</arg>
-                                            </exec>
-                                        </cmd>
-                                        <assembly>
-                                            <targetDir>/veidemann</targetDir>
-
-                                            <inline>
-                                                <includeBaseDirectory>true</includeBaseDirectory>
-                                                <fileSets>
-                                                    <fileSet>
-                                                        <directory>target/appassembler/bin</directory>
-                                                        <outputDirectory>bin</outputDirectory>
-                                                        <includes>
-                                                            <include>${initializer.image.name}</include>
-                                                        </includes>
-                                                        <fileMode>0755</fileMode>
-                                                    </fileSet>
-                                                    <fileSet>
-                                                        <directory>target/appassembler/bin</directory>
-                                                        <outputDirectory>bin</outputDirectory>
-                                                        <excludes>
-                                                            <exclude>${initializer.image.name}</exclude>
-                                                        </excludes>
-                                                        <fileMode>0644</fileMode>
-                                                    </fileSet>
-                                                    <fileSet>
-                                                        <directory>target/appassembler</directory>
-                                                        <outputDirectory>/</outputDirectory>
-                                                        <excludes>
-                                                            <exclude>bin</exclude>
-                                                        </excludes>
-                                                    </fileSet>
-                                                </fileSets>
-                                                <files>
-                                                    <file>
-                                                        <source>LICENSE</source>
-                                                        <outputDirectory></outputDirectory>
-                                                        <fileMode>0644</fileMode>
-                                                    </file>
-                                                </files>
-                                            </inline>
-                                        </assembly>
-                                    </build>
-                                </image>
-                            </images>
                         </configuration>
                     </plugin>
                 </plugins>

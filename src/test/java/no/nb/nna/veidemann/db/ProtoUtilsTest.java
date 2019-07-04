@@ -15,24 +15,24 @@
  */
 package no.nb.nna.veidemann.db;
 
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.Map;
-
 import com.google.protobuf.Message;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
-import no.nb.nna.veidemann.api.ControllerProto.PolitenessConfigListReply;
 import no.nb.nna.veidemann.api.ConfigProto;
 import no.nb.nna.veidemann.api.ConfigProto.PolitenessConfig;
 import no.nb.nna.veidemann.api.ConfigProto.Role;
 import no.nb.nna.veidemann.api.ConfigProto.RoleMapping;
-import no.nb.nna.veidemann.db.ProtoUtils;
+import no.nb.nna.veidemann.api.ControllerProto.PolitenessConfigListReply;
 import org.junit.Test;
 
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoField;
+import java.util.Map;
+
 import static no.nb.nna.veidemann.db.RethinkDbAdapter.r;
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  *
@@ -166,6 +166,7 @@ public class ProtoUtilsTest {
     @Test
     public void testTsToOdt() {
         Instant now = Instant.now();
+        now = now.with(ChronoField.NANO_OF_SECOND, 0);
         Timestamp timestamp = Timestamps.fromMillis(now.toEpochMilli());
         OffsetDateTime expResult = OffsetDateTime.ofInstant(now, ZoneOffset.UTC);
 
