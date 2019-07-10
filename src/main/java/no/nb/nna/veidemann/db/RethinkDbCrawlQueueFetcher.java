@@ -100,9 +100,11 @@ public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
 
                 Map<String, Object> chgDoc = getNextCrawlHostGroup();
                 List chgId = (List) chgDoc.get("id");
+                LOG.trace("Found Crawl Host Group ({})", chgId);
 
                 DistributedLock lock = conn.createDistributedLock(RethinkDbCrawlQueueAdapter.createKey(chgId), LOCK_EXPIRATION_SECONDS);
                 if (lock.tryLock(3, TimeUnit.SECONDS)) {
+                    LOG.trace("Lock created for chgId ({})", chgId);
                     try {
                         Map<String, Object> borrowResponse = conn.exec("db-borrowFirstReadyCrawlHostGroup",
                                 r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
@@ -127,10 +129,12 @@ public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
                         if (borrowResponse != null) {
                             long replaced = (long) borrowResponse.get("replaced");
                             if (replaced == 1L) {
+                                LOG.trace("Crawl Host Group ({}) was ready", chgId);
                                 Map<String, Object> newDoc = ((List<Map<String, Map>>) borrowResponse.get("changes")).get(0).get("new_val");
                                 long queueCount = crawlHostGroupQueueCount(chgId);
 
                                 if (queueCount == 0L) {
+                                    LOG.trace("Deleting Crawl Host Group ({}) because there were no URI's in queue", chgId);
                                     // No more URIs in queue for this CrawlHostGroup, delete it
                                     conn.exec("db-deleteCrawlHostGroup",
                                             r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
@@ -141,6 +145,7 @@ public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
                                     );
                                 } else {
                                     // Found available CrawlHostGroup, set it as busy
+                                    LOG.trace("Setting Crawl Host Group ({}) as busy", chgId);
                                     newDoc.put("busy", true);
                                     newDoc.put("expires", r.now().add(CHG_EXPIRATION_SECONDS));
                                     CrawlHostGroup chg = buildCrawlHostGroup(newDoc, queueCount);
