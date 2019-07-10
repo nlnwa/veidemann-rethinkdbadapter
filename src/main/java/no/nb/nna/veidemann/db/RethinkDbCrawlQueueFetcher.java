@@ -204,8 +204,7 @@ public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
 
         List<Map<String, Object>> eids = conn.exec("db-getNextQueuedUriToFetch",
                 r.table(Tables.URI_QUEUE.name).optArg("read_mode", "majority")
-                        .orderBy().optArg("index", "crawlHostGroupKey_sequence_earliestFetch")
-                        .between(fromKey, toKey)
+                        .between(fromKey, toKey).optArg("index", "crawlHostGroupKey_sequence_earliestFetch")
                         .pluck("executionId", "priorityWeight")
                         .distinct());
 
