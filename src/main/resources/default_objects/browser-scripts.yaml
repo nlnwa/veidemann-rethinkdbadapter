@@ -17,7 +17,9 @@ browserScript:
             var outlinks = Array.prototype.slice.call(frame.document.querySelectorAll('a[href]'));
             for (var i = 0; i < frame.frames.length; i++) {
                 if (frame.frames[i] && !__brzl_framesDone.has(frame.frames[i])) {
-                    outlinks = outlinks.concat(__brzl_compileOutlinks(frame.frames[i]));
+                    try {
+                        outlinks = outlinks.concat(__brzl_compileOutlinks(frame.frames[i]));
+                    } catch {}
                 }
             }
         }
