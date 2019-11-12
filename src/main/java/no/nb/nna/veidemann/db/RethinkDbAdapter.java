@@ -15,18 +15,14 @@
  */
 package no.nb.nna.veidemann.db;
 
-import com.google.protobuf.Empty;
 import com.google.protobuf.Message;
 import com.rethinkdb.RethinkDB;
 import com.rethinkdb.ast.ReqlAst;
 import no.nb.nna.veidemann.api.MessagesProto.ExtractedText;
-import no.nb.nna.veidemann.api.MessagesProto.Screenshot;
 import no.nb.nna.veidemann.api.ReportProto.CrawlLogListReply;
 import no.nb.nna.veidemann.api.ReportProto.CrawlLogListRequest;
 import no.nb.nna.veidemann.api.ReportProto.PageLogListReply;
 import no.nb.nna.veidemann.api.ReportProto.PageLogListRequest;
-import no.nb.nna.veidemann.api.ReportProto.ScreenshotListReply;
-import no.nb.nna.veidemann.api.ReportProto.ScreenshotListRequest;
 import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
 import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
@@ -178,21 +174,6 @@ public class RethinkDbAdapter implements DbAdapter {
     public PageLogListReply listPageLogs(PageLogListRequest request) throws DbException {
         PageLogListRequestQueryBuilder queryBuilder = new PageLogListRequestQueryBuilder(request);
         return queryBuilder.executeList(conn).build();
-    }
-
-    @Override
-    public Screenshot saveScreenshot(Screenshot s) throws DbException {
-        return null;
-    }
-
-    @Override
-    public ScreenshotListReply listScreenshots(ScreenshotListRequest request) throws DbException {
-        return ScreenshotListReply.getDefaultInstance();
-    }
-
-    @Override
-    public Empty deleteScreenshot(Screenshot screenshot) throws DbException {
-        return Empty.getDefaultInstance();
     }
 
     @Override

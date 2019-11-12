@@ -20,16 +20,6 @@ import com.google.protobuf.Message;
 import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.ReqlFunction1;
 import com.rethinkdb.net.Cursor;
-import no.nb.nna.veidemann.api.ConfigProto.BrowserConfig;
-import no.nb.nna.veidemann.api.ConfigProto.BrowserScript;
-import no.nb.nna.veidemann.api.ConfigProto.CrawlConfig;
-import no.nb.nna.veidemann.api.ConfigProto.CrawlEntity;
-import no.nb.nna.veidemann.api.ConfigProto.CrawlHostGroupConfig;
-import no.nb.nna.veidemann.api.ConfigProto.CrawlJob;
-import no.nb.nna.veidemann.api.ConfigProto.CrawlScheduleConfig;
-import no.nb.nna.veidemann.api.ConfigProto.PolitenessConfig;
-import no.nb.nna.veidemann.api.ConfigProto.RoleMapping;
-import no.nb.nna.veidemann.api.ConfigProto.Seed;
 import no.nb.nna.veidemann.api.ReportProto.Filter;
 import no.nb.nna.veidemann.api.config.v1.Kind;
 import no.nb.nna.veidemann.commons.db.DbException;
@@ -345,40 +335,7 @@ public abstract class ConfigListQueryBuilder<T extends Message> {
         if (kind != Kind.undefined) {
             entity = RethinkDbConfigAdapter.convertV1ToOldApi(entity);
         }
-        switch (kind) {
-            case crawlConfig:
-                b = CrawlConfig.newBuilder();
-                break;
-            case browserConfig:
-                b = BrowserConfig.newBuilder();
-                break;
-            case browserScript:
-                b = BrowserScript.newBuilder();
-                break;
-            case crawlEntity:
-                b = CrawlEntity.newBuilder();
-                break;
-            case crawlHostGroupConfig:
-                b = CrawlHostGroupConfig.newBuilder();
-                break;
-            case crawlJob:
-                b = CrawlJob.newBuilder();
-                break;
-            case crawlScheduleConfig:
-                b = CrawlScheduleConfig.newBuilder();
-                break;
-            case politenessConfig:
-                b = PolitenessConfig.newBuilder();
-                break;
-            case seed:
-                b = Seed.newBuilder();
-                break;
-            case roleMapping:
-                b = RoleMapping.newBuilder();
-                break;
-            default:
-                b = table.schema.newBuilderForType();
-        }
+        b = table.schema.newBuilderForType();
         return ProtoUtils.rethinkToProto(entity, b);
     }
 

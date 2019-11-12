@@ -18,11 +18,14 @@ package no.nb.nna.veidemann.db;
 import com.google.protobuf.Message;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
-import no.nb.nna.veidemann.api.ConfigProto;
-import no.nb.nna.veidemann.api.ConfigProto.PolitenessConfig;
-import no.nb.nna.veidemann.api.ConfigProto.Role;
-import no.nb.nna.veidemann.api.ConfigProto.RoleMapping;
-import no.nb.nna.veidemann.api.ControllerProto.PolitenessConfigListReply;
+import no.nb.nna.veidemann.api.config.v1.ConfigObject;
+import no.nb.nna.veidemann.api.config.v1.Kind;
+import no.nb.nna.veidemann.api.config.v1.Label;
+import no.nb.nna.veidemann.api.config.v1.Meta;
+import no.nb.nna.veidemann.api.config.v1.PolitenessConfig;
+import no.nb.nna.veidemann.api.config.v1.PolitenessConfig.RobotsPolicy;
+import no.nb.nna.veidemann.api.config.v1.Role;
+import no.nb.nna.veidemann.api.config.v1.RoleMapping;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -44,22 +47,28 @@ public class ProtoUtilsTest {
      */
     @Test
     public void testProtoToRethink() {
-        PolitenessConfigListReply msg = PolitenessConfigListReply.newBuilder()
-                .addValue(PolitenessConfig.newBuilder()
-                        .setId("UUID")
-                        .setMeta(ConfigProto.Meta.newBuilder()
-                                .setName("Nasjonalbiblioteket")
-                                .addLabel(ConfigProto.Label.newBuilder()
-                                        .setKey("frequency")
-                                        .setValue("Daily"))
-                                .addLabel(ConfigProto.Label.newBuilder()
-                                        .setKey("orgType")
-                                        .setValue("Government"))
-                                .setCreated(ProtoUtils.odtToTs(OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))))
+        ConfigObject msg = ConfigObject.newBuilder()
+                .setApiVersion("v1")
+                .setKind(Kind.politenessConfig)
+                .setId("UUID")
+                .setMeta(Meta.newBuilder()
+                        .setName("Nasjonalbiblioteket")
+                        .addLabel(Label.newBuilder()
+                                .setKey("frequency")
+                                .setValue("Daily"))
+                        .addLabel(Label.newBuilder()
+                                .setKey("orgType")
+                                .setValue("Government"))
+                        .setCreated(ProtoUtils.odtToTs(OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))))
+                .setPolitenessConfig(PolitenessConfig.newBuilder()
                         .setDelayFactor(.1f)
-                ).build();
+                        .setRobotsPolicy(RobotsPolicy.IGNORE_ROBOTS)
+                        .setMaxRetries(5))
+                .build();
 
         Map politenessConfig = r.hashMap("id", "UUID")
+                .with("apiVersion", "v1")
+                .with("kind", "politenessConfig")
                 .with("meta", r.hashMap()
                         .with("name", "Nasjonalbiblioteket")
                         .with("created", OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))
@@ -67,12 +76,15 @@ public class ProtoUtilsTest {
                                 r.hashMap("key", "frequency").with("value", "Daily"),
                                 r.hashMap("key", "orgType").with("value", "Government")))
                 )
-                .with("delayFactor", .1f);
-        Map politenessConfigList = r.hashMap("value", r.array(politenessConfig));
+                .with("politenessConfig", r.hashMap()
+                        .with("delayFactor", .1f)
+                        .with("robotsPolicy", "IGNORE_ROBOTS")
+                        .with("maxRetries", 5)
+                );
 
         Map<String, Object> result = ProtoUtils.protoToRethink(msg);
 
-        assertThat(result).isEqualTo(politenessConfigList);
+        assertThat(result).isEqualTo(politenessConfig);
 
         // Check conversion of object with list of enums
         Map roleMappingRethink = r.hashMap("email", "admin@example.com")
@@ -86,22 +98,28 @@ public class ProtoUtilsTest {
      */
     @Test
     public void testRethinkToProto_Map_Class() {
-        PolitenessConfigListReply expResult = PolitenessConfigListReply.newBuilder()
-                .addValue(PolitenessConfig.newBuilder()
-                        .setId("UUID")
-                        .setMeta(ConfigProto.Meta.newBuilder()
-                                .setName("Nasjonalbiblioteket")
-                                .addLabel(ConfigProto.Label.newBuilder()
-                                        .setKey("frequency")
-                                        .setValue("Daily"))
-                                .addLabel(ConfigProto.Label.newBuilder()
-                                        .setKey("orgType")
-                                        .setValue("Government"))
-                                .setCreated(ProtoUtils.odtToTs(OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))))
+        ConfigObject expResult = ConfigObject.newBuilder()
+                .setApiVersion("v1")
+                .setKind(Kind.politenessConfig)
+                .setId("UUID")
+                .setMeta(Meta.newBuilder()
+                        .setName("Nasjonalbiblioteket")
+                        .addLabel(Label.newBuilder()
+                                .setKey("frequency")
+                                .setValue("Daily"))
+                        .addLabel(Label.newBuilder()
+                                .setKey("orgType")
+                                .setValue("Government"))
+                        .setCreated(ProtoUtils.odtToTs(OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))))
+                .setPolitenessConfig(PolitenessConfig.newBuilder()
                         .setDelayFactor(.1f)
-                ).build();
+                        .setRobotsPolicy(RobotsPolicy.IGNORE_ROBOTS)
+                        .setMaxRetries(5))
+                .build();
 
         Map politenessConfig = r.hashMap("id", "UUID")
+                .with("apiVersion", "v1")
+                .with("kind", "politenessConfig")
                 .with("meta", r.hashMap()
                         .with("name", "Nasjonalbiblioteket")
                         .with("created", OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))
@@ -109,11 +127,14 @@ public class ProtoUtilsTest {
                                 r.hashMap("key", "frequency").with("value", "Daily"),
                                 r.hashMap("key", "orgType").with("value", "Government")))
                 )
-                .with("delayFactor", .1f);
-        Map politenessConfigList = r.hashMap("value", r.array(politenessConfig));
+                .with("politenessConfig", r.hashMap()
+                        .with("delayFactor", .1f)
+                        .with("robotsPolicy", "IGNORE_ROBOTS")
+                        .with("maxRetries", 5)
+                );
 
-        PolitenessConfigListReply result = ProtoUtils
-                .rethinkToProto(politenessConfigList, PolitenessConfigListReply.class);
+        ConfigObject result = ProtoUtils
+                .rethinkToProto(politenessConfig, ConfigObject.class);
 
         assertThat(result).isEqualTo(expResult);
 
@@ -129,22 +150,28 @@ public class ProtoUtilsTest {
      */
     @Test
     public void testRethinkToProto_Map_MessageBuilder() {
-        PolitenessConfigListReply expResult = PolitenessConfigListReply.newBuilder()
-                .addValue(PolitenessConfig.newBuilder()
-                        .setId("UUID")
-                        .setMeta(ConfigProto.Meta.newBuilder()
-                                .setName("Nasjonalbiblioteket")
-                                .addLabel(ConfigProto.Label.newBuilder()
-                                        .setKey("frequency")
-                                        .setValue("Daily"))
-                                .addLabel(ConfigProto.Label.newBuilder()
-                                        .setKey("orgType")
-                                        .setValue("Government"))
-                                .setCreated(ProtoUtils.odtToTs(OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))))
+        ConfigObject expResult = ConfigObject.newBuilder()
+                .setApiVersion("v1")
+                .setKind(Kind.politenessConfig)
+                .setId("UUID")
+                .setMeta(Meta.newBuilder()
+                        .setName("Nasjonalbiblioteket")
+                        .addLabel(Label.newBuilder()
+                                .setKey("frequency")
+                                .setValue("Daily"))
+                        .addLabel(Label.newBuilder()
+                                .setKey("orgType")
+                                .setValue("Government"))
+                        .setCreated(ProtoUtils.odtToTs(OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))))
+                .setPolitenessConfig(PolitenessConfig.newBuilder()
                         .setDelayFactor(.1f)
-                ).build();
+                        .setRobotsPolicy(RobotsPolicy.IGNORE_ROBOTS)
+                        .setMaxRetries(5))
+                .build();
 
         Map politenessConfig = r.hashMap("id", "UUID")
+                .with("apiVersion", "v1")
+                .with("kind", "politenessConfig")
                 .with("meta", r.hashMap()
                         .with("name", "Nasjonalbiblioteket")
                         .with("created", OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))
@@ -152,10 +179,13 @@ public class ProtoUtilsTest {
                                 r.hashMap("key", "frequency").with("value", "Daily"),
                                 r.hashMap("key", "orgType").with("value", "Government")))
                 )
-                .with("delayFactor", .1f);
-        Map politenessConfigList = r.hashMap("value", r.array(politenessConfig));
+                .with("politenessConfig", r.hashMap()
+                        .with("delayFactor", .1f)
+                        .with("robotsPolicy", "IGNORE_ROBOTS")
+                        .with("maxRetries", 5)
+                );
 
-        Message result = ProtoUtils.rethinkToProto(politenessConfigList, PolitenessConfigListReply.newBuilder());
+        Message result = ProtoUtils.rethinkToProto(politenessConfig, ConfigObject.newBuilder());
 
         assertThat(result).isEqualTo(expResult);
     }

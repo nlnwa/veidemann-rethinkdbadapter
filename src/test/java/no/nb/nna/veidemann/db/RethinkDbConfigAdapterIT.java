@@ -22,6 +22,8 @@ import no.nb.nna.veidemann.api.config.v1.ConfigRef;
 import no.nb.nna.veidemann.api.config.v1.GetLabelKeysRequest;
 import no.nb.nna.veidemann.api.config.v1.Label;
 import no.nb.nna.veidemann.api.config.v1.ListRequest;
+import no.nb.nna.veidemann.api.config.v1.LogLevels;
+import no.nb.nna.veidemann.api.config.v1.LogLevels.LogLevel;
 import no.nb.nna.veidemann.api.config.v1.UpdateRequest;
 import no.nb.nna.veidemann.commons.auth.EmailContextKey;
 import no.nb.nna.veidemann.commons.auth.RolesContextKey;
@@ -687,5 +689,19 @@ public class RethinkDbConfigAdapterIT {
                 .build());
 
         assertThat(fetched2).isNull();
+    }
+
+    @Test
+    public void testSaveAndGetLogConfig() throws DbException {
+        LogLevel l1 = LogLevel.newBuilder().setLogger("no.nb.nna").setLevel(LogLevels.Level.INFO).build();
+        LogLevel l2 = LogLevel.newBuilder().setLogger("org.apache").setLevel(LogLevels.Level.FATAL).build();
+        LogLevels logLevels = LogLevels.newBuilder().addLogLevel(l1).addLogLevel(l2).build();
+        LogLevels response;
+
+        response = configAdapter.saveLogConfig(logLevels);
+        assertThat(response).isEqualTo(logLevels);
+
+        response = configAdapter.getLogConfig();
+        assertThat(response).isEqualTo(logLevels);
     }
 }

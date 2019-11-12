@@ -15,7 +15,10 @@
         <docker.tag>latest</docker.tag>
 
         <initializer.image.name>veidemann-db-initializer</initializer.image.name>
-        <log4j.version>2.7</log4j.version>
+        <log4j.version>2.12.1</log4j.version>
+
+<!--        <veidemann-commons-version>0.3.11</veidemann-commons-version>-->
+        <veidemann-commons-version>0.4.0</veidemann-commons-version>
 
         <!--Docker container versions forintegration tests-->
         <rethinkdb.version>2.3.6</rethinkdb.version>
@@ -43,7 +46,7 @@
         <dependency>
             <groupId>com.github.nlnwa</groupId>
             <artifactId>veidemann-commons</artifactId>
-            <version>0.3.11</version>
+            <version>${veidemann-commons-version}</version>
         </dependency>
         <dependency>
             <groupId>com.rethinkdb</groupId>
@@ -131,7 +134,7 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>1.2.0</version>
+                <version>1.7.0</version>
                 <configuration>
                     <to>
                         <image>docker.io/norsknettarkiv/${initializer.image.name}</image>
@@ -202,6 +205,7 @@
                     <plugin>
                         <groupId>io.fabric8</groupId>
                         <artifactId>docker-maven-plugin</artifactId>
+                        <version>0.31.0</version>
                         <executions>
                             <execution>
                                 <id>prepare-tests</id>
