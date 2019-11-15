@@ -27,7 +27,10 @@ import no.nb.nna.veidemann.api.frontier.v1.Cookie;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatusChange;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
+import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus.State;
 import no.nb.nna.veidemann.api.frontier.v1.QueuedUri;
+import no.nb.nna.veidemann.api.report.v1.JobExecutionsListRequest;
+import no.nb.nna.veidemann.commons.db.ChangeFeed;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbService;
 import no.nb.nna.veidemann.commons.settings.CommonSettings;
@@ -520,23 +523,41 @@ public class RethinkDbExecutionsAdapterIT {
         jes2 = executionsAdapter.setJobExecutionStateAborted(jes2.getId());
 
         // Check job executions list functions
-        JobExecutionsListReply jList = executionsAdapter.listJobExecutionStatus(ListJobExecutionsRequest.getDefaultInstance());
-        assertThat(jList.getCount()).isEqualTo(2);
-        assertThat(jList.getValueCount()).isEqualTo(2);
-        assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes1, jes2);
+        ChangeFeed<JobExecutionStatus> jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.getDefaultInstance());
+        assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
+//        assertThat(jList.getCount()).isEqualTo(2);
+//        assertThat(jList.getValueCount()).isEqualTo(2);
+//        assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes1, jes2);
 
-        jList = executionsAdapter.listJobExecutionStatus(ListJobExecutionsRequest.newBuilder().addId(jes2.getId()).build());
-        assertThat(jList.getCount()).isEqualTo(1);
-        assertThat(jList.getValueCount()).isEqualTo(1);
-        assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes2);
+        jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addId(jes2.getId()).build());
+        assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes2);
+//        assertThat(jList.getCount()).isEqualTo(1);
+//        assertThat(jList.getValueCount()).isEqualTo(1);
+//        assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes2);
 
         System.out.println(executionsAdapter.getJobExecutionStatus(jes1.getId()).getState());
         System.out.println(executionsAdapter.getJobExecutionStatus(jes2.getId()).getState());
 
-        jList = executionsAdapter.listJobExecutionStatus(ListJobExecutionsRequest.newBuilder().addState("RUNNING").build());
-        assertThat(jList.getCount()).isEqualTo(1);
-        assertThat(jList.getValueCount()).isEqualTo(1);
-        assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes1);
+        JobExecutionsListRequest.Builder req = JobExecutionsListRequest.newBuilder();
+        req.getQueryTemplateBuilder().setState(State.RUNNING);
+        req.getQueryMaskBuilder().addPaths("state");
+        jList = executionsAdapter.listJobExecutionStatus(req.build());
+        assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes1);
+//        assertThat(jList.getCount()).isEqualTo(1);
+//        assertThat(jList.getValueCount()).isEqualTo(1);
+//        assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes1);
+
+        jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).build());
+        assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes2);
+
+        jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).addState(State.RUNNING).build());
+        assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
+
+        jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().setStartTimeFrom(ProtoUtils.getNowTs()).build());
+        assertThat(jList.stream()).hasSize(0);
+
+        jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().setStartTimeTo(ProtoUtils.getNowTs()).build());
+        assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
     }
 
 }

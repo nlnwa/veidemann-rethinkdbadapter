@@ -16,12 +16,14 @@
 
 package no.nb.nna.veidemann.db;
 
+import com.google.protobuf.Message;
 import com.rethinkdb.RethinkDB;
 import com.rethinkdb.gen.ast.Insert;
 import com.rethinkdb.gen.ast.ReqlFunction1;
 import com.rethinkdb.gen.ast.Update;
 import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Cursor;
+import no.nb.nna.veidemann.api.MessagesProto.ExtractedText;
 import no.nb.nna.veidemann.api.StatusProto;
 import no.nb.nna.veidemann.api.StatusProto.ExecutionsListReply;
 import no.nb.nna.veidemann.api.StatusProto.JobExecutionsListReply;
@@ -30,9 +32,17 @@ import no.nb.nna.veidemann.api.StatusProto.ListJobExecutionsRequest;
 import no.nb.nna.veidemann.api.StatusProto.RunningExecutionsListReply;
 import no.nb.nna.veidemann.api.StatusProto.RunningExecutionsRequest;
 import no.nb.nna.veidemann.api.config.v1.CrawlScope;
+import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
+import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatusChange;
+import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
+import no.nb.nna.veidemann.api.frontier.v1.PageLog;
+import no.nb.nna.veidemann.api.report.v1.CrawlLogListRequest;
+import no.nb.nna.veidemann.api.report.v1.JobExecutionsListRequest;
+import no.nb.nna.veidemann.api.report.v1.ListCountResponse;
+import no.nb.nna.veidemann.api.report.v1.PageLogListRequest;
 import no.nb.nna.veidemann.commons.db.ChangeFeed;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DistributedLock;
@@ -45,6 +55,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 
 public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
@@ -110,9 +121,20 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     }
 
     @Override
-    public JobExecutionsListReply listJobExecutionStatus(ListJobExecutionsRequest request) throws DbException {
-        JobExecutionsListRequestQueryBuilder queryBuilder = new JobExecutionsListRequestQueryBuilder(request);
-        return queryBuilder.executeList(conn).build();
+    public ChangeFeed<JobExecutionStatus> listJobExecutionStatus(JobExecutionsListRequest jobExecutionsListRequest) throws DbException {
+        ListJobExecutionQueryBuilder q = new ListJobExecutionQueryBuilder(jobExecutionsListRequest);
+
+        Cursor<Map<String, Object>> res = conn.exec("db-listJobExecutions", q.getListQuery());
+
+        return new ChangeFeedBase<JobExecutionStatus>(res) {
+            @Override
+            protected Function<Map<String, Object>, JobExecutionStatus> mapper() {
+                return co -> {
+                    JobExecutionStatus res = ProtoUtils.rethinkToProto(co, JobExecutionStatus.class);
+                    return res;
+                };
+            }
+        };
     }
 
     @Override
@@ -425,6 +447,127 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
         };
     }
 
+    @Override
+    public Optional<CrawledContent> hasCrawledContent(CrawledContent crawledContent) throws DbException {
+        ensureContainsValue(crawledContent, "digest");
+        ensureContainsValue(crawledContent, "warc_id");
+        ensureContainsValue(crawledContent, "target_uri");
+        ensureContainsValue(crawledContent, "date");
+
+        Map rMap = ProtoUtils.protoToRethink(crawledContent);
+        Map<String, Object> response = conn.exec("db-hasCrawledContent",
+                r.table(Tables.CRAWLED_CONTENT.name)
+                        .insert(rMap)
+                        .optArg("conflict", (id, old_doc, new_doc) -> old_doc)
+                        .optArg("return_changes", "always")
+                        .g("changes").nth(0).g("old_val"));
+
+        if (response == null) {
+            return Optional.empty();
+        } else {
+            CrawledContent result = ProtoUtils.rethinkToProto(response, CrawledContent.class);
+
+            // Check existence of original in storage ref table.
+            // This prevents false positives in the case writing of original record was cancelled after
+            // crawled_content table was updated.
+            Object check = conn.exec("db-hasCrawledContentCheck",
+                    r.table(Tables.STORAGE_REF.name).get(result.getWarcId()));
+            if (check == null) {
+                return Optional.empty();
+            } else {
+                return Optional.of(result);
+            }
+        }
+    }
+
+    @Override
+    public StorageRef saveStorageRef(StorageRef storageRef) throws DbException {
+        return null;
+    }
+
+    @Override
+    public StorageRef getStorageRef(String s) throws DbException {
+        return null;
+    }
+
+    @Override
+    public CrawlLog saveCrawlLog(CrawlLog crawlLog) throws DbException {
+        return null;
+    }
+
+    @Override
+    public ChangeFeed<CrawlLog> listCrawlLogs(CrawlLogListRequest crawlLogListRequest) throws DbException {
+        ListCrawlLogQueryBuilder q = new ListCrawlLogQueryBuilder(crawlLogListRequest);
+
+        Cursor<Map<String, Object>> res = conn.exec("db-listCrawlLogs", q.getListQuery());
+
+        return new ChangeFeedBase<CrawlLog>(res) {
+            @Override
+            protected Function<Map<String, Object>, CrawlLog> mapper() {
+                return co -> {
+                    CrawlLog res = ProtoUtils.rethinkToProto(co, CrawlLog.class);
+                    return res;
+                };
+            }
+        };
+    }
+
+    @Override
+    public ListCountResponse countCrawlLogs(CrawlLogListRequest crawlLogListRequest) throws DbException {
+        ListCrawlLogQueryBuilder q = new ListCrawlLogQueryBuilder(crawlLogListRequest);
+        long res = conn.exec("db-countCrawlLogs", q.getCountQuery());
+        return ListCountResponse.newBuilder().setCount(res).build();
+    }
+
+    @Override
+    public PageLog savePageLog(PageLog pageLog) throws DbException {
+        return null;
+    }
+
+    @Override
+    public ChangeFeed<PageLog> listPageLogs(PageLogListRequest pageLogListRequest) throws DbException {
+        ListPageLogQueryBuilder q = new ListPageLogQueryBuilder(pageLogListRequest);
+
+        Cursor<Map<String, Object>> res = conn.exec("db-listPageLogs", q.getListQuery());
+
+        return new ChangeFeedBase<PageLog>(res) {
+            @Override
+            protected Function<Map<String, Object>, PageLog> mapper() {
+                return co -> {
+                    PageLog res = ProtoUtils.rethinkToProto(co, PageLog.class);
+                    return res;
+                };
+            }
+        };
+    }
+
+    @Override
+    public ListCountResponse countPageLogs(PageLogListRequest pageLogListRequest) throws DbException {
+        ListPageLogQueryBuilder q = new ListPageLogQueryBuilder(pageLogListRequest);
+        long res = conn.exec("db-countPageLogs", q.getCountQuery());
+        return ListCountResponse.newBuilder().setCount(res).build();
+    }
+
+    @Override
+    public ExtractedText addExtractedText(ExtractedText extractedText) throws DbException {
+        return null;
+    }
+
+    @Override
+    public boolean setDesiredPausedState(boolean b) throws DbException {
+        return false;
+    }
+
+    @Override
+    public boolean getDesiredPausedState() throws DbException {
+        return false;
+    }
+
+    @Override
+    public boolean isPaused() throws DbException {
+        return false;
+    }
+
     private Map summarizeJobExecutionStats(String jobExecutionId) throws DbException {
         String[] EXECUTIONS_STAT_FIELDS = new String[]{"documentsCrawled", "documentsDenied",
                 "documentsFailed", "documentsOutOfScope", "documentsRetried", "urisCrawled", "bytesCrawled"};
@@ -466,6 +609,13 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
                         }
                 )
         );
+    }
+
+    private void ensureContainsValue(Message msg, String fieldName) {
+        if (!msg.getAllFields().keySet().stream().filter(k -> k.getName().equals(fieldName)).findFirst().isPresent()) {
+            throw new IllegalArgumentException("The required field '" + fieldName + "' is missing from: '" + msg
+                    .getClass().getSimpleName() + "'");
+        }
     }
 
 }

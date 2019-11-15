@@ -332,9 +332,9 @@ public abstract class ConfigListQueryBuilder<T extends Message> {
 
     private Message convertObject(Map<String, Object> entity) {
         Message.Builder b;
-        if (kind != Kind.undefined) {
-            entity = RethinkDbConfigAdapter.convertV1ToOldApi(entity);
-        }
+//        if (kind != Kind.undefined) {
+//            entity = RethinkDbConfigAdapter.convertV1ToOldApi(entity);
+//        }
         b = table.schema.newBuilderForType();
         return ProtoUtils.rethinkToProto(entity, b);
     }
