@@ -22,7 +22,7 @@ import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbService;
 import no.nb.nna.veidemann.commons.settings.CommonSettings;
 import no.nb.nna.veidemann.db.ProtoUtils;
-import no.nb.nna.veidemann.db.RethinkDbAdapter;
+import no.nb.nna.veidemann.db.RethinkDbConnection;
 import no.nb.nna.veidemann.db.Tables;
 import org.junit.After;
 import org.junit.Before;
@@ -35,7 +35,7 @@ import static com.rethinkdb.RethinkDB.r;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class DbInitializerTestIT {
-    public static RethinkDbAdapter db;
+    public static RethinkDbConnection conn;
 
     @Before
     public void init() throws DbException {
@@ -60,7 +60,7 @@ public class DbInitializerTestIT {
             }
         }
 
-        db = (RethinkDbAdapter) DbService.getInstance().getDbAdapter();
+        conn = ((RethinkDbInitializer) DbService.getInstance().getDbInitializer()).getDbConnection();
     }
 
     @After
@@ -72,13 +72,13 @@ public class DbInitializerTestIT {
     public void initialize() throws DbException {
         DbService.getInstance().getDbInitializer().initialize();
 
-        String version = db.executeRequest("", r.table(Tables.SYSTEM.name).get("db_version").g("db_version"));
+        String version = conn.exec(r.table(Tables.SYSTEM.name).get("db_version").g("db_version"));
         assertThat(version).isEqualTo(CreateNewDb.DB_VERSION);
 
-        long configObjectCount = db.executeRequest("", r.table(Tables.CONFIG.name).count());
+        long configObjectCount = conn.exec(r.table(Tables.CONFIG.name).count());
         assertThat(configObjectCount).isGreaterThan(0);
 
-        Map o = db.executeRequest("", r.table(Tables.CONFIG.name)
+        Map o = conn.exec(r.table(Tables.CONFIG.name)
                 .group("kind")
                 .count()
                 .ungroup()
@@ -92,7 +92,7 @@ public class DbInitializerTestIT {
         assertThat(o.get("crawlConfig")).isEqualTo(1L);
         assertThat(o.get("crawlScheduleConfig")).isEqualTo(3L);
 
-        try (Cursor<Map> configObjects = db.executeRequest("", r.table(Tables.CONFIG.name))) {
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name))) {
             assertThat(configObjects.iterator())
                     .hasSize(13)
                     .allSatisfy(r -> {
@@ -104,7 +104,7 @@ public class DbInitializerTestIT {
                     });
         }
 
-        try (Cursor<Map> configObjects = db.executeRequest("", r.table(Tables.CONFIG.name)
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
                 .filter(r.hashMap("kind", "browserConfig")))) {
             assertThat(configObjects.iterator())
                     .hasSize(1)
@@ -121,54 +121,54 @@ public class DbInitializerTestIT {
     public void repair() throws DbException {
         DbService.getInstance().getDbInitializer().initialize();
 
-        String version = db.executeRequest("", r.table(Tables.SYSTEM.name).get("db_version").g("db_version"));
+        String version = conn.exec(r.table(Tables.SYSTEM.name).get("db_version").g("db_version"));
         assertThat(version).isEqualTo(CreateNewDb.DB_VERSION);
 
-        List<String> tables = db.executeRequest("", r.tableList());
+        List<String> tables = conn.exec(r.tableList());
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name, Tables.SEEDS.name,
                 Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
                 Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
                 Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
-        List<String> indexes = db.executeRequest("", r.table(Tables.CONFIG.name).indexList());
+        List<String> indexes = conn.exec(r.table(Tables.CONFIG.name).indexList());
         assertThat(indexes).containsOnly("configRefs", "kind_label_key", "label", "label_value", "lastModified", "lastModifiedBy", "name");
 
-        db.executeRequest("", r.tableDrop(Tables.SEEDS.name));
-        db.executeRequest("", r.table(Tables.CONFIG.name).indexDrop("configRefs"));
+        conn.exec(r.tableDrop(Tables.SEEDS.name));
+        conn.exec(r.table(Tables.CONFIG.name).indexDrop("configRefs"));
 
-        tables = db.executeRequest("", r.tableList());
+        tables = conn.exec(r.tableList());
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name,
                 Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
                 Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
                 Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
-        indexes = db.executeRequest("", r.table(Tables.CONFIG.name).indexList());
+        indexes = conn.exec(r.table(Tables.CONFIG.name).indexList());
         assertThat(indexes).containsOnly("kind_label_key", "label", "label_value", "lastModified", "lastModifiedBy", "name");
 
         DbService.getInstance().getDbInitializer().initialize();
 
-        tables = db.executeRequest("", r.tableList());
+        tables = conn.exec(r.tableList());
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name, Tables.SEEDS.name,
                 Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
                 Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
                 Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
-        indexes = db.executeRequest("", r.table(Tables.CONFIG.name).indexList());
+        indexes = conn.exec(r.table(Tables.CONFIG.name).indexList());
         assertThat(indexes).containsOnly("configRefs", "kind_label_key", "label", "label_value", "lastModified", "lastModifiedBy", "name");
     }
 
     @Test
     public void upgrade() throws DbException {
-        new CreateDbV0_1(db, "veidemann").run();
+        new CreateDbV0_1(conn, "veidemann").run();
         DbService.getInstance().getDbInitializer().initialize();
 
-        String version = db.executeRequest("", r.table(Tables.SYSTEM.name).get("db_version").g("db_version"));
+        String version = conn.exec(r.table(Tables.SYSTEM.name).get("db_version").g("db_version"));
         assertThat(version).isEqualTo(CreateNewDb.DB_VERSION);
 
-        long configObjectCount = db.executeRequest("", r.table(Tables.CONFIG.name).count());
+        long configObjectCount = conn.exec(r.table(Tables.CONFIG.name).count());
         assertThat(configObjectCount).isGreaterThan(0);
 
-        Map o = db.executeRequest("", r.table(Tables.CONFIG.name)
+        Map o = conn.exec(r.table(Tables.CONFIG.name)
                 .group("kind")
                 .count()
                 .ungroup()
@@ -182,7 +182,7 @@ public class DbInitializerTestIT {
         assertThat(o.get("crawlConfig")).isEqualTo(1L);
         assertThat(o.get("crawlScheduleConfig")).isEqualTo(3L);
 
-        try (Cursor<Map> configObjects = db.executeRequest("", r.table(Tables.CONFIG.name))) {
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name))) {
             assertThat(configObjects.iterator())
                     .hasSize(13)
                     .allSatisfy(r -> {
@@ -194,7 +194,7 @@ public class DbInitializerTestIT {
                     });
         }
 
-        try (Cursor<Map> configObjects = db.executeRequest("", r.table(Tables.SEEDS.name))) {
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.SEEDS.name))) {
             assertThat(configObjects.iterator())
                     .hasSize(4)
                     .allSatisfy(r -> {
@@ -207,7 +207,7 @@ public class DbInitializerTestIT {
                         checkConfigRefList((Map) r.get("seed"), "jobRef", Kind.crawlJob);
                     });
         }
-        try (Cursor<Map> configObjects = db.executeRequest("", r.table(Tables.SEEDS.name)
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.SEEDS.name)
                 .getAll(r.array(Kind.crawlEntity.name(), "d816019f-103e-44b8-aa3b-93cd727104c6"))
                 .optArg("index", "configRefs"))) {
             assertThat(configObjects.iterator())
@@ -223,7 +223,7 @@ public class DbInitializerTestIT {
                     });
         }
 
-        try (Cursor<Map> configObjects = db.executeRequest("", r.table(Tables.CRAWL_ENTITIES.name))) {
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CRAWL_ENTITIES.name))) {
             assertThat(configObjects.iterator())
                     .hasSize(4)
                     .allSatisfy(r -> {
@@ -235,7 +235,7 @@ public class DbInitializerTestIT {
                     });
         }
 
-        try (Cursor<Map> configObjects = db.executeRequest("", r.table(Tables.CONFIG.name)
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
                 .filter(r.hashMap("kind", "browserConfig")))) {
             assertThat(configObjects.iterator())
                     .hasSize(1)
@@ -247,7 +247,7 @@ public class DbInitializerTestIT {
                     });
         }
 
-        try (Cursor<Map> configObjects = db.executeRequest("", r.table(Tables.CONFIG.name)
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
                 .filter(r.hashMap("kind", "crawlConfig")))) {
             assertThat(configObjects.iterator())
                     .hasSize(1)
@@ -260,7 +260,7 @@ public class DbInitializerTestIT {
                     });
         }
 
-        try (Cursor<Map> crawledContent = db.executeRequest("", r.table(Tables.CRAWLED_CONTENT.name))) {
+        try (Cursor<Map> crawledContent = conn.exec(r.table(Tables.CRAWLED_CONTENT.name))) {
             assertThat(crawledContent.iterator())
                     .hasSize(11)
                     .allSatisfy(r -> {

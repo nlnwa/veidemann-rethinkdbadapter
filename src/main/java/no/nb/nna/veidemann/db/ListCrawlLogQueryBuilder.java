@@ -71,6 +71,10 @@ public class ListCrawlLogQueryBuilder {
             query = query.pluck(queryBuilder.createPluckQuery());
         }
 
+        if (request.getWatch()) {
+            query = query.changes();
+        }
+
         if (request.getPageSize() > 0 || request.getOffset() > 0) {
             query = query.skip(request.getOffset()).limit(request.getPageSize());
         }

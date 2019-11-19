@@ -18,17 +18,20 @@ package no.nb.nna.veidemann.db;
 
 import com.google.protobuf.Timestamp;
 import com.rethinkdb.RethinkDB;
-import no.nb.nna.veidemann.api.StatusProto.ExecutionsListReply;
-import no.nb.nna.veidemann.api.StatusProto.JobExecutionsListReply;
-import no.nb.nna.veidemann.api.StatusProto.ListExecutionsRequest;
-import no.nb.nna.veidemann.api.StatusProto.ListJobExecutionsRequest;
+import no.nb.nna.veidemann.api.commons.v1.ExtractedText;
 import no.nb.nna.veidemann.api.config.v1.CrawlScope;
+import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
+import no.nb.nna.veidemann.api.contentwriter.v1.RecordType;
+import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
 import no.nb.nna.veidemann.api.frontier.v1.Cookie;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatusChange;
+import no.nb.nna.veidemann.api.frontier.v1.CrawlHostGroup;
+import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus.State;
 import no.nb.nna.veidemann.api.frontier.v1.QueuedUri;
+import no.nb.nna.veidemann.api.report.v1.CrawlExecutionsListRequest;
 import no.nb.nna.veidemann.api.report.v1.JobExecutionsListRequest;
 import no.nb.nna.veidemann.commons.db.ChangeFeed;
 import no.nb.nna.veidemann.commons.db.DbException;
@@ -40,12 +43,14 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class RethinkDbExecutionsAdapterIT {
 
-    public static RethinkDbConnection db;
+    public static RethinkDbConnection conn;
     public static RethinkDbExecutionsAdapter executionsAdapter;
 
     static RethinkDB r = RethinkDB.r;
@@ -75,7 +80,7 @@ public class RethinkDbExecutionsAdapterIT {
         DbService.getInstance().getDbInitializer().initialize();
 
         executionsAdapter = (RethinkDbExecutionsAdapter) DbService.getInstance().getExecutionsAdapter();
-        db = ((RethinkDbInitializer) DbService.getInstance().getDbInitializer()).getDbConnection();
+        conn = ((RethinkDbInitializer) DbService.getInstance().getDbInitializer()).getDbConnection();
     }
 
     @AfterClass
@@ -88,7 +93,7 @@ public class RethinkDbExecutionsAdapterIT {
         for (Tables table : Tables.values()) {
             if (table != Tables.SYSTEM) {
                 try {
-                    db.exec("delete", r.table(table.name).delete());
+                    conn.exec("delete", r.table(table.name).delete());
                 } catch (Exception e) {
                     System.out.println(e.getMessage());
                 }
@@ -484,36 +489,66 @@ public class RethinkDbExecutionsAdapterIT {
     }
 
     @Test
-    public void listCrawlExecutionStatus() throws DbException {
+    public void listCrawlExecutionStatus() throws DbException, InterruptedException {
         CrawlExecutionStatus ces1 = executionsAdapter.createCrawlExecutionStatus("jobId1", "jobExe1", "seedId1", CrawlScope.getDefaultInstance());
         CrawlExecutionStatus ces2 = executionsAdapter.createCrawlExecutionStatus("jobId1", "jobExe1", "seedId2", CrawlScope.getDefaultInstance());
         CrawlExecutionStatus ces3 = executionsAdapter.createCrawlExecutionStatus("jobId1", "jobExe2", "seedId1", CrawlScope.getDefaultInstance());
 
         // Check crawl executions list functions
-        ExecutionsListReply eList = executionsAdapter.listCrawlExecutionStatus(ListExecutionsRequest.getDefaultInstance());
-        assertThat(eList.getCount()).isEqualTo(3);
-        assertThat(eList.getValueCount()).isEqualTo(3);
-        assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces1, ces2, ces3);
+        CrawlExecutionsListRequest.Builder request = CrawlExecutionsListRequest.newBuilder();
+        ChangeFeed<CrawlExecutionStatus> eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(3)
+                .containsExactlyInAnyOrder(ces1, ces2, ces3);
 
-        eList = executionsAdapter.listCrawlExecutionStatus(ListExecutionsRequest.newBuilder().addId(ces2.getId()).build());
-        assertThat(eList.getCount()).isEqualTo(1);
-        assertThat(eList.getValueCount()).isEqualTo(1);
-        assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces2);
+        request = CrawlExecutionsListRequest.newBuilder().addId(ces2.getId());
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(1)
+                .containsExactlyInAnyOrder(ces2);
 
-        eList = executionsAdapter.listCrawlExecutionStatus(ListExecutionsRequest.newBuilder().setJobExecutionId("jobExe1").build());
-        assertThat(eList.getCount()).isEqualTo(2);
-        assertThat(eList.getValueCount()).isEqualTo(2);
-        assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces1, ces2);
+        request = CrawlExecutionsListRequest.newBuilder();
+        request.getQueryTemplateBuilder().setJobExecutionId("jobExe1");
+        request.getQueryMaskBuilder().addPaths("jobExecutionId");
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(2)
+                .containsExactlyInAnyOrder(ces1, ces2);
 
-        eList = executionsAdapter.listCrawlExecutionStatus(ListExecutionsRequest.newBuilder().setSeedId("seedId1").build());
-        assertThat(eList.getCount()).isEqualTo(2);
-        assertThat(eList.getValueCount()).isEqualTo(2);
-        assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces1, ces3);
+        request = CrawlExecutionsListRequest.newBuilder();
+        request.getQueryTemplateBuilder().setSeedId("seedId1");
+        request.getQueryMaskBuilder().addPaths("seedId");
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(2)
+                .containsExactlyInAnyOrder(ces1, ces3);
 
-        eList = executionsAdapter.listCrawlExecutionStatus(ListExecutionsRequest.newBuilder().setJobExecutionId("jobExe1").setSeedId("seedId1").build());
-        assertThat(eList.getCount()).isEqualTo(1);
-        assertThat(eList.getValueCount()).isEqualTo(1);
-        assertThat(eList.getValueList()).containsExactlyInAnyOrder(ces1);
+        request = CrawlExecutionsListRequest.newBuilder();
+        request.getQueryTemplateBuilder().setJobExecutionId("jobExe1").setSeedId("seedId1");
+        request.getQueryMaskBuilder().addPaths("jobExecutionId").addPaths("seedId");
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(1)
+                .containsExactlyInAnyOrder(ces1);
+
+        // Test watch query
+        request = CrawlExecutionsListRequest.newBuilder().setWatch(true);
+        ChangeFeed<CrawlExecutionStatus> feed = executionsAdapter.listCrawlExecutionStatus(request.build());
+        new Thread(() -> {
+            try {
+                Thread.sleep(100);
+                String id = executionsAdapter.createCrawlExecutionStatus("jobId1", "jobExe2", "seedId3", CrawlScope.getDefaultInstance()).getId();
+                Thread.sleep(100);
+                executionsAdapter.setCrawlExecutionStateAborted(id);
+                Thread.sleep(100);
+                feed.stream().close();
+            } catch (InterruptedException | DbException e) {
+                e.printStackTrace();
+            }
+        }).start();
+        assertThat(feed.stream())
+                .hasSize(2)
+                .allMatch(e -> e.getSeedId().equals("seedId3"));
     }
 
     @Test
@@ -525,15 +560,9 @@ public class RethinkDbExecutionsAdapterIT {
         // Check job executions list functions
         ChangeFeed<JobExecutionStatus> jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.getDefaultInstance());
         assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
-//        assertThat(jList.getCount()).isEqualTo(2);
-//        assertThat(jList.getValueCount()).isEqualTo(2);
-//        assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes1, jes2);
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addId(jes2.getId()).build());
         assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes2);
-//        assertThat(jList.getCount()).isEqualTo(1);
-//        assertThat(jList.getValueCount()).isEqualTo(1);
-//        assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes2);
 
         System.out.println(executionsAdapter.getJobExecutionStatus(jes1.getId()).getState());
         System.out.println(executionsAdapter.getJobExecutionStatus(jes2.getId()).getState());
@@ -543,9 +572,6 @@ public class RethinkDbExecutionsAdapterIT {
         req.getQueryMaskBuilder().addPaths("state");
         jList = executionsAdapter.listJobExecutionStatus(req.build());
         assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes1);
-//        assertThat(jList.getCount()).isEqualTo(1);
-//        assertThat(jList.getValueCount()).isEqualTo(1);
-//        assertThat(jList.getValueList()).containsExactlyInAnyOrder(jes1);
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).build());
         assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes2);
@@ -558,6 +584,148 @@ public class RethinkDbExecutionsAdapterIT {
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().setStartTimeTo(ProtoUtils.getNowTs()).build());
         assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
+    }
+
+    /**
+     * Test of hasCrawledContent method, of class RethinkDbAdapter.
+     */
+    @Test
+    public void testHasCrawledContent() throws DbException {
+        CrawledContent cc1 = CrawledContent.newBuilder()
+                .setDigest("testIsDuplicateContent")
+                .setWarcId("warc-id1")
+                .setTargetUri("target-uri1")
+                .setDate(ProtoUtils.getNowTs())
+                .build();
+        CrawledContent cc2 = CrawledContent.newBuilder()
+                .setDigest("testIsDuplicateContent")
+                .setWarcId("warc-id2")
+                .setTargetUri("target-uri2")
+                .setDate(ProtoUtils.getNowTs())
+                .build();
+        CrawledContent cc3 = CrawledContent.newBuilder()
+                .setDigest("testIsDuplicateContent")
+                .setWarcId("warc-id3")
+                .setTargetUri("target-uri3")
+                .setDate(ProtoUtils.getNowTs())
+                .build();
+
+        assertThat(executionsAdapter.hasCrawledContent(cc1).isPresent()).isFalse();
+        executionsAdapter.saveStorageRef(StorageRef.newBuilder()
+                .setWarcId(cc1.getWarcId())
+                .setRecordType(RecordType.REQUEST)
+                .setStorageRef("warcfile:test:0")
+                .build());
+
+        Optional<CrawledContent> r2 = executionsAdapter.hasCrawledContent(cc2);
+        assertThat(r2.isPresent()).isTrue();
+        assertThat(r2.get()).isEqualTo(cc1);
+
+        Optional<CrawledContent> r3 = executionsAdapter.hasCrawledContent(cc3);
+        assertThat(r3.isPresent()).isTrue();
+        assertThat(r3.get()).isEqualTo(cc1);
+
+        CrawledContent cc4 = CrawledContent.newBuilder()
+                .setWarcId("warc-id4")
+                .build();
+
+        assertThatThrownBy(() -> executionsAdapter.hasCrawledContent(cc4))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("The required field 'digest' is missing from: 'CrawledContent");
+    }
+
+    /**
+     * Test of deleteCrawledContent method, of class RethinkDbAdapter.
+     */
+    @Test
+    public void testDeleteCrawledContent() throws DbException {
+        CrawledContent cc = CrawledContent.newBuilder()
+                .setDigest("testDeleteCrawledContent")
+                .setWarcId("warc-id")
+                .setTargetUri("target-uri")
+                .setDate(ProtoUtils.getNowTs())
+                .build();
+
+        executionsAdapter.hasCrawledContent(cc);
+        executionsAdapter.deleteCrawledContent(cc.getDigest());
+        executionsAdapter.deleteCrawledContent(cc.getDigest());
+    }
+
+    /**
+     * Test of addExtractedText method, of class RethinkDbAdapter.
+     */
+    @Test
+    public void testAddExtractedText() throws DbException {
+        ExtractedText et1 = ExtractedText.newBuilder()
+                .setWarcId("testAddExtractedText")
+                .setText("text")
+                .build();
+
+        ExtractedText result1 = executionsAdapter.addExtractedText(et1);
+        assertThat(result1).isEqualTo(et1);
+
+        assertThatThrownBy(() -> executionsAdapter.addExtractedText(et1))
+                .isInstanceOf(DbException.class)
+                .hasMessageContaining("Duplicate primary key");
+
+        ExtractedText et2 = ExtractedText.newBuilder()
+                .setText("text")
+                .build();
+
+        assertThatThrownBy(() -> executionsAdapter.addExtractedText(et2))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("The required field 'warc_id' is missing from: 'ExtractedText");
+    }
+
+    /**
+     * Test of addCrawlLog method, of class RethinkDbAdapter.
+     */
+    @Test
+    public void testSaveCrawlLog() throws DbException {
+        CrawlLog cl = CrawlLog.newBuilder()
+                .setContentType("text/plain")
+                .setJobExecutionId("jeid")
+                .setExecutionId("eid")
+                .setCollectionFinalName("collection")
+                .build();
+        CrawlLog result = executionsAdapter.saveCrawlLog(cl);
+        assertThat(result.getContentType()).isEqualTo("text/plain");
+        assertThat(result.getWarcId()).isNotEmpty();
+    }
+
+    @Test
+    public void testPaused() throws DbException {
+        assertThat(executionsAdapter.getDesiredPausedState()).isFalse();
+        assertThat(executionsAdapter.isPaused()).isFalse();
+
+        assertThat(executionsAdapter.setDesiredPausedState(true)).isFalse();
+
+        assertThat(executionsAdapter.getDesiredPausedState()).isTrue();
+        assertThat(executionsAdapter.isPaused()).isTrue();
+
+        assertThat(executionsAdapter.setDesiredPausedState(true)).isTrue();
+        assertThat(executionsAdapter.isPaused()).isTrue();
+
+        assertThat(executionsAdapter.getDesiredPausedState()).isTrue();
+
+        assertThat(executionsAdapter.setDesiredPausedState(false)).isTrue();
+        assertThat(executionsAdapter.isPaused()).isFalse();
+
+        CrawlHostGroup chg = CrawlHostGroup.newBuilder().setId("chg").setBusy(true).build();
+        conn.exec("db-save",
+                r.table(Tables.CRAWL_HOST_GROUP.name).insert(ProtoUtils.protoToRethink(chg)).optArg("conflict", "replace"));
+        assertThat(executionsAdapter.getDesiredPausedState()).isFalse();
+        assertThat(executionsAdapter.isPaused()).isFalse();
+
+        assertThat(executionsAdapter.setDesiredPausedState(true)).isFalse();
+        assertThat(executionsAdapter.isPaused()).isFalse();
+
+        chg = chg.toBuilder().setBusy(false).build();
+        conn.exec("db-save",
+                r.table(Tables.CRAWL_HOST_GROUP.name).insert(ProtoUtils.protoToRethink(chg)).optArg("conflict", "replace"));
+
+        assertThat(executionsAdapter.getDesiredPausedState()).isTrue();
+        assertThat(executionsAdapter.isPaused()).isTrue();
     }
 
 }

@@ -34,7 +34,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoField;
 import java.util.Map;
 
-import static no.nb.nna.veidemann.db.RethinkDbAdapter.r;
+import static com.rethinkdb.RethinkDB.r;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**

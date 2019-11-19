@@ -19,9 +19,7 @@ package no.nb.nna.veidemann.db;
 import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.Table;
 import no.nb.nna.veidemann.api.report.v1.CrawlExecutionsListRequest;
-import no.nb.nna.veidemann.api.report.v1.JobExecutionsListRequest;
 import no.nb.nna.veidemann.db.fieldmask.CrawlExecutionQueryBuilder;
-import no.nb.nna.veidemann.db.fieldmask.JobExecutionQueryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,6 +85,10 @@ public class ListCrawlExecutionQueryBuilder {
         if (request.hasReturnedFieldsMask()) {
             CrawlExecutionQueryBuilder queryBuilder = new CrawlExecutionQueryBuilder(request.getReturnedFieldsMask());
             query = query.pluck(queryBuilder.createPluckQuery());
+        }
+
+        if (request.getWatch()) {
+            query = query.changes();
         }
 
         if (request.getPageSize() > 0 || request.getOffset() > 0) {

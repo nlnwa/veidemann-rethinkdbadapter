@@ -56,7 +56,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  */
 public class RethinkDbConfigAdapterIT {
     public static RethinkDbConfigAdapter configAdapter;
-    public static RethinkDbAdapter dbAdapter;
     static final RethinkDB r = RethinkDB.r;
 
     ConfigObject crawlScheduleConfig1;
@@ -97,7 +96,6 @@ public class RethinkDbConfigAdapterIT {
         }
 
         configAdapter = (RethinkDbConfigAdapter) DbService.getInstance().getConfigAdapter();
-        dbAdapter = (RethinkDbAdapter) DbService.getInstance().getDbAdapter();
 
         ConfigObject.Builder csc1 = ConfigObject.newBuilder()
                 .setApiVersion("v1")

@@ -1,7 +1,7 @@
 package no.nb.nna.veidemann.db;
 
 import com.google.protobuf.Message;
-import no.nb.nna.veidemann.api.MessagesProto.ExtractedText;
+import no.nb.nna.veidemann.api.commons.v1.ExtractedText;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject;
 import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
 import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;

@@ -35,11 +35,18 @@ public class CrawlExecutionQueryBuilder extends RethinkDbFieldMasksQueryBuilder<
 
     @Override
     protected void init() {
-        addSortable("startTime", "startTime");
+        addSortable("createdTime", "createdTime");
         addSortable("jobId", "jobId");
         addSortable("state", "state");
         addSortable("seedId", "seedId");
-        addSortable("createdTime", "createdTime");
+
+        addIndex("id", "id");
+        addIndex("createdTime", "createdTime");
+        addIndex("jobId", "jobId");
+        addIndex("state", "state");
+        addIndex("seedId", "seedId");
+        addIndex("jobExecutionId_seedId", "jobExecutionId", "seedId");
+        addIndex("seedId_createdTime", "seedId", "createdTime");
 
         addMinimumReturnedField("id");
     }

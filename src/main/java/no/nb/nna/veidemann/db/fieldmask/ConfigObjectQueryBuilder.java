@@ -38,6 +38,11 @@ public class ConfigObjectQueryBuilder extends RethinkDbFieldMasksQueryBuilder<Co
         addSortable("meta.lastModified", "lastModified");
         addSortable("meta.lastModifiedBy", "lastModifiedBy");
 
+        addIndex("name", "meta.name");
+        addIndex("label", "meta.label");
+        addIndex("lastModified", "meta.lastModified");
+        addIndex("lastModifiedBy", "meta.lastModifiedBy");
+
         addReadOnlyPath("id");
         addReadOnlyPath("apiVersion");
         addReadOnlyPath("kind");
