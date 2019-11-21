@@ -12,10 +12,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <docker.tag>latest</docker.tag>
+        <docker.tag>${project.version}</docker.tag>
 
         <initializer.image.name>veidemann-db-initializer</initializer.image.name>
-        <log4j.version>2.7</log4j.version>
+        <log4j.version>2.12.1</log4j.version>
+
+        <veidemann-commons-version>0.4.0</veidemann-commons-version>
 
         <!--Docker container versions forintegration tests-->
         <rethinkdb.version>2.3.6</rethinkdb.version>
@@ -43,7 +45,7 @@
         <dependency>
             <groupId>com.github.nlnwa</groupId>
             <artifactId>veidemann-commons</artifactId>
-            <version>0.3.11</version>
+            <version>${veidemann-commons-version}</version>
         </dependency>
         <dependency>
             <groupId>com.rethinkdb</groupId>
@@ -112,6 +114,12 @@
             <version>2.27.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.5.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -120,6 +128,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
+                <version>3.1.2</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -131,7 +140,7 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>1.2.0</version>
+                <version>1.7.0</version>
                 <configuration>
                     <to>
                         <image>docker.io/norsknettarkiv/${initializer.image.name}</image>
@@ -202,6 +211,7 @@
                     <plugin>
                         <groupId>io.fabric8</groupId>
                         <artifactId>docker-maven-plugin</artifactId>
+                        <version>0.31.0</version>
                         <executions>
                             <execution>
                                 <id>prepare-tests</id>

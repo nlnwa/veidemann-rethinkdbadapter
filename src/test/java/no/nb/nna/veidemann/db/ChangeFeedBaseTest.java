@@ -22,11 +22,12 @@ import no.nb.nna.veidemann.api.config.v1.ConfigObject;
 import no.nb.nna.veidemann.commons.db.ChangeFeed;
 import org.junit.Test;
 
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,14 +35,15 @@ public class ChangeFeedBaseTest {
     static final RethinkDB r = RethinkDB.r;
 
     @Test
-    public void stream() {
-        List responses = r.array(
-                r.hashMap("id", "id1"),
-                r.hashMap("id", "id2").with("seed", r.hashMap("disabled", "100"))
-        );
-
+    public void stream() throws TimeoutException {
         Cursor<Map<String, Object>> cursorMock = mock(Cursor.class);
-        when(cursorMock.spliterator()).thenReturn(responses.spliterator());
+        when(cursorMock.hasNext())
+                .thenReturn(true)
+                .thenReturn(true)
+                .thenReturn(false);
+        when(cursorMock.next(anyLong()))
+                .thenReturn(r.hashMap("id", "id1"))
+                .thenReturn(r.hashMap("id", "id2").with("seed", r.hashMap("disabled", "100")));
 
         ChangeFeed<ConfigObject> cf = new ChangeFeedBase<ConfigObject>(cursorMock) {
             @Override

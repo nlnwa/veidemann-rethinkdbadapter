@@ -17,17 +17,18 @@
 package no.nb.nna.veidemann.db.fieldmask;
 
 import no.nb.nna.veidemann.api.commons.v1.FieldMask;
-import no.nb.nna.veidemann.api.config.v1.ConfigObject;
-import no.nb.nna.veidemann.api.config.v1.ConfigObjectOrBuilder;
+import no.nb.nna.veidemann.api.frontier.v1.CrawlLogOrBuilder;
+import no.nb.nna.veidemann.api.frontier.v1.PageLog;
+import no.nb.nna.veidemann.api.frontier.v1.PageLogOrBuilder;
 
-public class ConfigObjectQueryBuilder extends RethinkDbFieldMasksQueryBuilder<ConfigObjectOrBuilder> {
-    private final static ObjectPathAccessor OBJ_DEF = new ObjectPathAccessor(ConfigObject.class);
+public class PageLogQueryBuilder extends RethinkDbFieldMasksQueryBuilder<PageLogOrBuilder> {
+    private final static ObjectPathAccessor OBJ_DEF = new ObjectPathAccessor(PageLog.class);
 
-    public ConfigObjectQueryBuilder() {
+    public PageLogQueryBuilder() {
         super(OBJ_DEF);
     }
 
-    public ConfigObjectQueryBuilder(FieldMask fieldMask) {
+    public PageLogQueryBuilder(FieldMask fieldMask) {
         super(OBJ_DEF.createForFieldMaskProto(fieldMask));
     }
 
@@ -37,11 +38,6 @@ public class ConfigObjectQueryBuilder extends RethinkDbFieldMasksQueryBuilder<Co
         addSortable("meta.label", "label");
         addSortable("meta.lastModified", "lastModified");
         addSortable("meta.lastModifiedBy", "lastModifiedBy");
-
-        addIndex("name", "meta.name");
-        addIndex("label", "meta.label");
-        addIndex("lastModified", "meta.lastModified");
-        addIndex("lastModifiedBy", "meta.lastModifiedBy");
 
         addReadOnlyPath("id");
         addReadOnlyPath("apiVersion");

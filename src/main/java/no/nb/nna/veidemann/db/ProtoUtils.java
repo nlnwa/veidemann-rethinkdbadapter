@@ -40,7 +40,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static no.nb.nna.veidemann.db.RethinkDbAdapter.r;
+import static com.rethinkdb.RethinkDB.r;
 
 /**
  * Static methods for converting between Protobuf messages and RethinkDB objects.

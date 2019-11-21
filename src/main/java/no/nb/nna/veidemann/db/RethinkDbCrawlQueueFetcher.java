@@ -61,7 +61,9 @@ public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
         try (Cursor<Map<String, Object>> response = conn.exec("db-borrowFirstReadyCrawlHostGroup",
                 r.table(Tables.CRAWL_HOST_GROUP.name)
                         .orderBy().optArg("index", "nextFetchTime")
-                        .between(r.minval(), r.now()).optArg("right_bound", "closed").limit(prefetchSize)
+                        .between(r.minval(), r.now()).optArg("right_bound", "closed")
+                        .filter(d -> d.g("busy").eq(false).or(d.g("expires").lt(r.now())))
+                        .limit(prefetchSize)
         )) {
             chgQueue.addAll(response.toList());
         } catch (Exception e) {
@@ -93,7 +95,7 @@ public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
     public CrawlableUri getNextToFetch() throws InterruptedException {
         try {
             while (true) {
-                if (DbService.getInstance().getDbAdapter().getDesiredPausedState()) {
+                if (DbService.getInstance().getExecutionsAdapter().getDesiredPausedState()) {
                     Thread.sleep(RESCHEDULE_DELAY);
                     continue;
                 }
@@ -102,35 +104,39 @@ public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
                 List chgId = (List) chgDoc.get("id");
                 LOG.trace("Found Crawl Host Group ({})", chgId);
 
-                DistributedLock lock = conn.createDistributedLock(RethinkDbCrawlQueueAdapter.createKey(chgId), LOCK_EXPIRATION_SECONDS);
-                if (lock.tryLock(3, TimeUnit.SECONDS)) {
-                    LOG.trace("Lock created for chgId ({})", chgId);
-                    try {
-                        Map<String, Object> borrowResponse = conn.exec("db-borrowFirstReadyCrawlHostGroup",
-                                r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
-                                        .get(chgId)
-                                        .replace(d ->
-                                                r.branch(
-                                                        // CrawlHostGroup doesn't exist, return null
-                                                        d.eq(null),
-                                                        null,
+                Map<String, Object> borrowResponse = conn.exec("db-borrowFirstReadyCrawlHostGroup",
+                        r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
+                                .get(chgId)
+                                .replace(d ->
+                                        r.branch(
+                                                // CrawlHostGroup doesn't exist, return null
+                                                d.eq(null),
+                                                null,
 
-                                                        // Busy is false or expired. This is the one we want, ensure busy is false and return it
-                                                        d.g("busy").eq(false).or(d.g("expires").lt(r.now())),
-                                                        d.merge(r.hashMap("busy", false).with("expires", r.now())),
+                                                // Busy is false or expired. This is the one we want, ensure busy is false and return it
+                                                d.g("busy").eq(false).or(d.g("expires").lt(r.now())),
+                                                d.merge(r.hashMap("busy", true).with("expires", r.now().add(CHG_EXPIRATION_SECONDS))),
 
-                                                        // The CrawlHostGroup is busy, return it unchanged
-                                                        d
-                                                ))
-                                        .optArg("return_changes", true)
-                                        .optArg("durability", "hard")
-                        );
+                                                // The CrawlHostGroup is busy, return it unchanged
+                                                d
+                                        ))
+                                .optArg("return_changes", true)
+                                .optArg("durability", "hard")
+                );
 
-                        if (borrowResponse != null) {
-                            long replaced = (long) borrowResponse.get("replaced");
-                            if (replaced == 1L) {
+                if (borrowResponse != null) {
+                    long replaced = (long) borrowResponse.get("replaced");
+                    if (replaced == 1L) {
+                        DistributedLock lock = conn.createDistributedLock(RethinkDbCrawlQueueAdapter.createKey(chgId), LOCK_EXPIRATION_SECONDS);
+                        if (lock.tryLock(3, TimeUnit.SECONDS)) {
+                            LOG.trace("Lock created for chgId ({})", chgId);
+                            try {
+
                                 LOG.trace("Crawl Host Group ({}) was ready", chgId);
                                 Map<String, Object> newDoc = ((List<Map<String, Map>>) borrowResponse.get("changes")).get(0).get("new_val");
+
+
+                                /// TODO: Refactor so that getting queue count becomes unnecessary.
                                 long queueCount = crawlHostGroupQueueCount(chgId);
 
                                 if (queueCount == 0L) {
@@ -144,19 +150,12 @@ public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
                                                     .optArg("durability", "hard")
                                     );
                                 } else {
+                                    /// TODO: End remove
+
+
                                     // Found available CrawlHostGroup, set it as busy
                                     LOG.trace("Setting Crawl Host Group ({}) as busy", chgId);
-                                    newDoc.put("busy", true);
-                                    newDoc.put("expires", r.now().add(CHG_EXPIRATION_SECONDS));
                                     CrawlHostGroup chg = buildCrawlHostGroup(newDoc, queueCount);
-
-                                    conn.exec("db-saveCrawlHostGroup",
-                                            r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
-                                                    .get(chgId)
-                                                    .replace(newDoc)
-                                                    .optArg("return_changes", false)
-                                                    .optArg("durability", "hard")
-                                    );
 
                                     // try to find URI for CrawlHostGroup
                                     FutureOptional<QueuedUri> foqu = getNextQueuedUriToFetch(chg);
@@ -175,13 +174,25 @@ public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
                                         // No URI found for this CrawlHostGroup. Wait for RESCHEDULE_DELAY and try again.
                                         LOG.trace("No Queued URI found waiting {}ms before retry", RESCHEDULE_DELAY);
                                         sleep = RESCHEDULE_DELAY;
+
+                                        /// TODO: In case of refactoring mentioned above, add chg deltion here
+                                        // LOG.trace("Deleting Crawl Host Group ({}) because there were no URI's in queue", chgId);
+                                        // // No more URIs in queue for this CrawlHostGroup, delete it
+                                        // conn.exec("db-deleteCrawlHostGroup",
+                                        //   r.table(Tables.CRAWL_HOST_GROUP.name).optArg("read_mode", "majority")
+                                        //    .get(chgId)
+                                        //    .delete()
+                                        //    .optArg("return_changes", false)
+                                        //    .optArg("durability", "hard")
+                                        // );
+
                                     }
                                     crawlQueueAdapter.releaseCrawlHostGroup(chg, sleep);
                                 }
+                            } finally {
+                                lock.unlock();
                             }
                         }
-                    } finally {
-                        lock.unlock();
                     }
                 }
             }
@@ -249,7 +260,8 @@ public class RethinkDbCrawlQueueFetcher implements CrawlQueueFetcher {
         return chg.build();
     }
 
-    private long crawlHostGroupQueueCount(List<String> crawlHostGroupId) throws DbQueryException, DbConnectionException {
+    private long crawlHostGroupQueueCount(List<String> crawlHostGroupId) throws
+            DbQueryException, DbConnectionException {
         String chgId = crawlHostGroupId.get(0);
         String politenessId = crawlHostGroupId.get(1);
 

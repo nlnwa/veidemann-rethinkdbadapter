@@ -46,7 +46,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  */
 public class RethinkDbEventAdapterIT {
     public static RethinkDbEventAdapter eventAdapter;
-    public static RethinkDbAdapter dbAdapter;
     static final RethinkDB r = RethinkDB.r;
 
     @Before
@@ -79,7 +78,6 @@ public class RethinkDbEventAdapterIT {
         }
 
         eventAdapter = (RethinkDbEventAdapter) DbService.getInstance().getEventAdapter();
-        dbAdapter = (RethinkDbAdapter) DbService.getInstance().getDbAdapter();
     }
 
     @After

@@ -22,7 +22,7 @@ import com.rethinkdb.net.Connection;
 import com.typesafe.config.Config;
 import no.nb.nna.veidemann.commons.settings.ConfigServer;
 import no.nb.nna.veidemann.db.ProtoUtils;
-import no.nb.nna.veidemann.api.ConfigProto.LogLevels;
+import no.nb.nna.veidemann.api.config.v1.LogLevels;
 import no.nb.nna.veidemann.db.Tables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

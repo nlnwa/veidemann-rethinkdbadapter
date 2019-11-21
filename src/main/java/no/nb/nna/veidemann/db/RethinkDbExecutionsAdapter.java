@@ -16,35 +16,39 @@
 
 package no.nb.nna.veidemann.db;
 
+import com.google.protobuf.Message;
 import com.rethinkdb.RethinkDB;
 import com.rethinkdb.gen.ast.Insert;
 import com.rethinkdb.gen.ast.ReqlFunction1;
 import com.rethinkdb.gen.ast.Update;
 import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Cursor;
-import no.nb.nna.veidemann.api.StatusProto;
-import no.nb.nna.veidemann.api.StatusProto.ExecutionsListReply;
-import no.nb.nna.veidemann.api.StatusProto.JobExecutionsListReply;
-import no.nb.nna.veidemann.api.StatusProto.ListExecutionsRequest;
-import no.nb.nna.veidemann.api.StatusProto.ListJobExecutionsRequest;
-import no.nb.nna.veidemann.api.StatusProto.RunningExecutionsListReply;
-import no.nb.nna.veidemann.api.StatusProto.RunningExecutionsRequest;
+import no.nb.nna.veidemann.api.commons.v1.ExtractedText;
 import no.nb.nna.veidemann.api.config.v1.CrawlScope;
+import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
+import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatusChange;
+import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
+import no.nb.nna.veidemann.api.frontier.v1.PageLog;
+import no.nb.nna.veidemann.api.report.v1.CrawlExecutionsListRequest;
+import no.nb.nna.veidemann.api.report.v1.CrawlLogListRequest;
+import no.nb.nna.veidemann.api.report.v1.JobExecutionsListRequest;
+import no.nb.nna.veidemann.api.report.v1.ListCountResponse;
+import no.nb.nna.veidemann.api.report.v1.PageLogListRequest;
 import no.nb.nna.veidemann.commons.db.ChangeFeed;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DistributedLock;
 import no.nb.nna.veidemann.commons.db.DistributedLock.Key;
 import no.nb.nna.veidemann.commons.db.ExecutionsAdapter;
-import no.nb.nna.veidemann.commons.util.ApiTools.ListReplyWalker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 
 public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
@@ -110,9 +114,28 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     }
 
     @Override
-    public JobExecutionsListReply listJobExecutionStatus(ListJobExecutionsRequest request) throws DbException {
-        JobExecutionsListRequestQueryBuilder queryBuilder = new JobExecutionsListRequestQueryBuilder(request);
-        return queryBuilder.executeList(conn).build();
+    public ChangeFeed<JobExecutionStatus> listJobExecutionStatus(JobExecutionsListRequest jobExecutionsListRequest) throws DbException {
+        ListJobExecutionQueryBuilder q = new ListJobExecutionQueryBuilder(jobExecutionsListRequest);
+
+        Cursor<Map<String, Object>> res = conn.exec("db-listJobExecutions", q.getListQuery());
+
+        return new ChangeFeedBase<JobExecutionStatus>(res) {
+            @Override
+            protected Function<Map<String, Object>, JobExecutionStatus> mapper() {
+                return co -> {
+                    // In case of a change feed, the real object is stored in new_val
+                    // If new_val is empty, the object is deleted. We skip those.
+                    if (co.containsKey("new_val")) {
+                        co = (Map) co.get("new_val");
+                        if (co == null) {
+                            return null;
+                        }
+                    }
+                    JobExecutionStatus res = ProtoUtils.rethinkToProto(co, JobExecutionStatus.class);
+                    return res;
+                };
+            }
+        };
     }
 
     @Override
@@ -129,18 +152,22 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
                 JobExecutionStatus.class);
 
         // Set all Crawl Executions which are part of this Job Execution to aborted
-        ListReplyWalker<ListExecutionsRequest, CrawlExecutionStatus> walker = new ListReplyWalker<>();
-        ListExecutionsRequest.Builder executionsRequest = ListExecutionsRequest.newBuilder().setJobExecutionId(jobExecutionId);
+        Cursor<Map<String, String>> res = conn.exec("db-setJobExecutionStateAborted",
+                r.table(Tables.EXECUTIONS.name)
+                        .between(
+                                r.array(jobExecutionId, r.minval()),
+                                r.array(jobExecutionId, r.maxval()))
+                        .optArg("index", "jobExecutionId_seedId")
+                        .pluck("id")
+        );
 
-        walker.walk(executionsRequest,
-                req -> listCrawlExecutionStatus(req),
-                exe -> {
-                    try {
-                        setCrawlExecutionStateAborted(exe.getId());
-                    } catch (DbException e) {
-                        LOG.error("Failed to abort Crawl Execution {}", exe.getId(), e);
-                    }
-                });
+        res.iterator().forEachRemaining(e -> {
+            try {
+                setCrawlExecutionStateAborted(e.get("id"));
+            } catch (DbException ex) {
+                LOG.error("Error while aborting Crawl Execution", ex);
+            }
+        });
 
         return result;
     }
@@ -351,9 +378,28 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     }
 
     @Override
-    public ExecutionsListReply listCrawlExecutionStatus(ListExecutionsRequest listExecutionsRequest) throws DbException {
-        CrawlExecutionsListRequestQueryBuilder queryBuilder = new CrawlExecutionsListRequestQueryBuilder(listExecutionsRequest);
-        return queryBuilder.executeList(conn).build();
+    public ChangeFeed<CrawlExecutionStatus> listCrawlExecutionStatus(CrawlExecutionsListRequest crawlExecutionsListRequest) throws DbException {
+        ListCrawlExecutionQueryBuilder q = new ListCrawlExecutionQueryBuilder(crawlExecutionsListRequest);
+
+        Cursor<Map<String, Object>> res = conn.exec("db-listCrawlExecutions", q.getListQuery());
+
+        return new ChangeFeedBase<CrawlExecutionStatus>(res) {
+            @Override
+            protected Function<Map<String, Object>, CrawlExecutionStatus> mapper() {
+                return co -> {
+                    // In case of a change feed, the real object is stored in new_val
+                    // If new_val is empty, the object is deleted. We skip those.
+                    if (co.containsKey("new_val")) {
+                        co = (Map) co.get("new_val");
+                        if (co == null) {
+                            return null;
+                        }
+                    }
+                    CrawlExecutionStatus res = ProtoUtils.rethinkToProto(co, CrawlExecutionStatus.class);
+                    return res;
+                };
+            }
+        };
     }
 
     @Override
@@ -377,52 +423,226 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     }
 
     @Override
-    public ChangeFeed<RunningExecutionsListReply> getCrawlExecutionStatusStream(RunningExecutionsRequest request) throws DbException {
-        int limit = request.getPageSize();
-        if (limit == 0) {
-            limit = 100;
+    public Optional<CrawledContent> hasCrawledContent(CrawledContent crawledContent) throws DbException {
+        ensureContainsValue(crawledContent, "digest");
+        ensureContainsValue(crawledContent, "warc_id");
+        ensureContainsValue(crawledContent, "target_uri");
+        ensureContainsValue(crawledContent, "date");
+
+        Map rMap = ProtoUtils.protoToRethink(crawledContent);
+        Map<String, Object> response = conn.exec("db-hasCrawledContent",
+                r.table(Tables.CRAWLED_CONTENT.name)
+                        .insert(rMap)
+                        .optArg("conflict", (id, old_doc, new_doc) -> old_doc)
+                        .optArg("return_changes", "always")
+                        .g("changes").nth(0).g("old_val"));
+
+        if (response == null) {
+            return Optional.empty();
+        } else {
+            CrawledContent result = ProtoUtils.rethinkToProto(response, CrawledContent.class);
+
+            // Check existence of original in storage ref table.
+            // This prevents false positives in the case writing of original record was cancelled after
+            // crawled_content table was updated.
+            Object check = conn.exec("db-hasCrawledContentCheck",
+                    r.table(Tables.STORAGE_REF.name).get(result.getWarcId()));
+            if (check == null) {
+                return Optional.empty();
+            } else {
+                return Optional.of(result);
+            }
         }
-        Cursor<Map<String, Object>> res = conn.exec("db-getExecutionStatusStream",
-                r.table(Tables.EXECUTIONS.name)
-                        .orderBy().optArg("index", r.desc("startTime"))
-                        .limit(limit)
-                        .changes().optArg("include_initial", true).optArg("include_offsets", true).optArg("squash", 2)
-                        .map(v -> v.g("new_val").merge(r.hashMap("newOffset", v.g("new_offset").default_((String) null))
-                                .with("oldOffset", v.g("old_offset").default_((String) null))))
-                        .eqJoin("seedId", r.table(Tables.SEEDS.name))
-                        .map(v -> {
-                            return v.g("left").merge(r.hashMap("seed", v.g("right").g("meta").g("name"))
-                                    .with("queueSize",
-                                            r.table("uri_queue")
-                                                    .getAll(v.g("left").g("id")).optArg("index", "executionId")
-                                                    .count()));
-                        })
-                        .without("seedId")
+    }
+
+    public void deleteCrawledContent(String digest) throws DbException {
+        conn.exec("db-deleteCrawledContent", r.table(Tables.CRAWLED_CONTENT.name).get(digest).delete());
+    }
+
+    @Override
+    public StorageRef saveStorageRef(StorageRef storageRef) throws DbException {
+        ensureContainsValue(storageRef, "warc_id");
+        ensureContainsValue(storageRef, "storage_ref");
+
+        Map rMap = ProtoUtils.protoToRethink(storageRef);
+        return conn.executeInsert("db-saveStorageRef",
+                r.table(Tables.STORAGE_REF.name)
+                        .insert(rMap)
+                        .optArg("conflict", "replace"),
+                StorageRef.class
         );
+    }
 
-        return new ChangeFeedBase<RunningExecutionsListReply>(res) {
-            RunningExecutionsListReply.Builder reply = RunningExecutionsListReply.newBuilder();
+    @Override
+    public StorageRef getStorageRef(String warcId) throws DbException {
+        return conn.executeGet("get-getStorageRef",
+                r.table(Tables.STORAGE_REF.name).get(warcId),
+                StorageRef.class
+        );
+    }
 
+    @Override
+    public CrawlLog saveCrawlLog(CrawlLog crawlLog) throws DbException {
+        if (!"text/dns".equals(crawlLog.getContentType())) {
+            if (crawlLog.getJobExecutionId().isEmpty()) {
+                LOG.error("Missing JobExecutionId in CrawlLog: {}", crawlLog, new IllegalStateException());
+            }
+            if (crawlLog.getExecutionId().isEmpty()) {
+                LOG.error("Missing ExecutionId in CrawlLog: {}", crawlLog, new IllegalStateException());
+            }
+        }
+        if (crawlLog.getCollectionFinalName().isEmpty()) {
+            LOG.error("Missing collectionFinalName: {}", crawlLog, new IllegalStateException());
+        }
+        if (!crawlLog.hasTimeStamp()) {
+            crawlLog = crawlLog.toBuilder().setTimeStamp(ProtoUtils.getNowTs()).build();
+        }
+
+        Map rMap = ProtoUtils.protoToRethink(crawlLog);
+        return conn.executeInsert("db-saveCrawlLog",
+                r.table(Tables.CRAWL_LOG.name)
+                        .insert(rMap)
+                        .optArg("conflict", "replace"),
+                CrawlLog.class
+        );
+    }
+
+    @Override
+    public ChangeFeed<CrawlLog> listCrawlLogs(CrawlLogListRequest crawlLogListRequest) throws DbException {
+        ListCrawlLogQueryBuilder q = new ListCrawlLogQueryBuilder(crawlLogListRequest);
+
+        Cursor<Map<String, Object>> res = conn.exec("db-listCrawlLogs", q.getListQuery());
+
+        return new ChangeFeedBase<CrawlLog>(res) {
             @Override
-            protected Function<Map<String, Object>, RunningExecutionsListReply> mapper() {
-                return t -> {
-                    Long newOffset = (Long) t.remove("newOffset");
-                    Long oldOffset = (Long) t.remove("oldOffset");
-                    StatusProto.StatusDetail resp = ProtoUtils.rethinkToProto(t, StatusProto.StatusDetail.class);
-                    if (oldOffset != null) {
-                        reply.removeValue(oldOffset.intValue());
-                    }
-                    if (newOffset != null) {
-                        if (newOffset > reply.getValueCount()) {
-                            newOffset = (long) reply.getValueCount();
+            protected Function<Map<String, Object>, CrawlLog> mapper() {
+                return co -> {
+                    // In case of a change feed, the real object is stored in new_val
+                    // If new_val is empty, the object is deleted. We skip those.
+                    if (co.containsKey("new_val")) {
+                        co = (Map) co.get("new_val");
+                        if (co == null) {
+                            return null;
                         }
-                        reply.addValue(newOffset.intValue(), resp);
                     }
-                    return reply.build();
+                    CrawlLog res = ProtoUtils.rethinkToProto(co, CrawlLog.class);
+                    return res;
                 };
             }
-
         };
+    }
+
+    @Override
+    public ListCountResponse countCrawlLogs(CrawlLogListRequest crawlLogListRequest) throws DbException {
+        ListCrawlLogQueryBuilder q = new ListCrawlLogQueryBuilder(crawlLogListRequest);
+        long res = conn.exec("db-countCrawlLogs", q.getCountQuery());
+        return ListCountResponse.newBuilder().setCount(res).build();
+    }
+
+    @Override
+    public PageLog savePageLog(PageLog pageLog) throws DbException {
+        if (pageLog.getCollectionFinalName().isEmpty()) {
+            LOG.error("Missing collectionFinalName: {}", pageLog, new IllegalStateException());
+        }
+        Map rMap = ProtoUtils.protoToRethink(pageLog);
+        return conn.executeInsert("db-savePageLog",
+                r.table(Tables.PAGE_LOG.name)
+                        .insert(rMap)
+                        .optArg("conflict", "replace"),
+                PageLog.class
+        );
+    }
+
+    @Override
+    public ChangeFeed<PageLog> listPageLogs(PageLogListRequest pageLogListRequest) throws DbException {
+        ListPageLogQueryBuilder q = new ListPageLogQueryBuilder(pageLogListRequest);
+
+        Cursor<Map<String, Object>> res = conn.exec("db-listPageLogs", q.getListQuery());
+
+        return new ChangeFeedBase<PageLog>(res) {
+            @Override
+            protected Function<Map<String, Object>, PageLog> mapper() {
+                return co -> {
+                    // In case of a change feed, the real object is stored in new_val
+                    // If new_val is empty, the object is deleted. We skip those.
+                    if (co.containsKey("new_val")) {
+                        co = (Map) co.get("new_val");
+                        if (co == null) {
+                            return null;
+                        }
+                    }
+                    PageLog res = ProtoUtils.rethinkToProto(co, PageLog.class);
+                    return res;
+                };
+            }
+        };
+    }
+
+    @Override
+    public ListCountResponse countPageLogs(PageLogListRequest pageLogListRequest) throws DbException {
+        ListPageLogQueryBuilder q = new ListPageLogQueryBuilder(pageLogListRequest);
+        long res = conn.exec("db-countPageLogs", q.getCountQuery());
+        return ListCountResponse.newBuilder().setCount(res).build();
+    }
+
+    @Override
+    public ExtractedText addExtractedText(ExtractedText extractedText) throws DbException {
+        ensureContainsValue(extractedText, "warc_id");
+        ensureContainsValue(extractedText, "text");
+
+        Map rMap = ProtoUtils.protoToRethink(extractedText);
+        Map<String, Object> response = conn.exec("db-addExtractedText",
+                r.table(Tables.EXTRACTED_TEXT.name)
+                        .insert(rMap)
+                        .optArg("conflict", "error"));
+
+        return extractedText;
+    }
+
+    @Override
+    public boolean setDesiredPausedState(boolean value) throws DbException {
+        String id = "state";
+        String key = "shouldPause";
+        Map<String, List<Map<String, Map>>> state = conn.exec("set-paused",
+                r.table(Tables.SYSTEM.name)
+                        .insert(r.hashMap("id", id).with(key, value))
+                        .optArg("conflict", "update")
+                        .optArg("return_changes", "always")
+        );
+        Map oldValue = state.get("changes").get(0).get("old_val");
+        if (oldValue == null || (Boolean) oldValue.computeIfAbsent(key, k -> Boolean.FALSE) == false) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    @Override
+    public boolean getDesiredPausedState() throws DbException {
+        String id = "state";
+        String key = "shouldPause";
+        Map<String, Object> state = conn.exec("get-paused",
+                r.table(Tables.SYSTEM.name)
+                        .get(id)
+        );
+        if (state == null) {
+            return false;
+        }
+        return (Boolean) state.computeIfAbsent(key, k -> Boolean.FALSE);
+    }
+
+    @Override
+    public boolean isPaused() throws DbException {
+        if (getDesiredPausedState()) {
+            long busyCount = conn.exec("is-paused",
+                    r.table(Tables.CRAWL_HOST_GROUP.name)
+                            .filter(r.hashMap("busy", true))
+                            .count()
+            );
+            return busyCount == 0L;
+        } else {
+            return false;
+        }
     }
 
     private Map summarizeJobExecutionStats(String jobExecutionId) throws DbException {
@@ -466,6 +686,13 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
                         }
                 )
         );
+    }
+
+    private void ensureContainsValue(Message msg, String fieldName) {
+        if (!msg.getAllFields().keySet().stream().filter(k -> k.getName().equals(fieldName)).findFirst().isPresent()) {
+            throw new IllegalArgumentException("The required field '" + fieldName + "' is missing from: '" + msg
+                    .getClass().getSimpleName() + "'");
+        }
     }
 
 }

@@ -16,31 +16,19 @@
 package no.nb.nna.veidemann.db;
 
 import com.rethinkdb.RethinkDB;
-import com.rethinkdb.net.Cursor;
 import no.nb.nna.veidemann.api.config.v1.ConfigRef;
-import no.nb.nna.veidemann.api.config.v1.CrawlScope;
 import no.nb.nna.veidemann.api.config.v1.Kind;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatusChange;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlHostGroup;
 import no.nb.nna.veidemann.api.frontier.v1.QueuedUri;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbService;
-import no.nb.nna.veidemann.commons.db.FutureOptional;
 import no.nb.nna.veidemann.commons.settings.CommonSettings;
-import no.nb.nna.veidemann.db.initializer.RethinkDbInitializer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -51,7 +39,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class RethinkDbCrawlQueueAdapterIT {
     public static RethinkDbCrawlQueueAdapter queueAdapter;
-    public static RethinkDbAdapter dbAdapter;
     static final RethinkDB r = RethinkDB.r;
 
     private final static int THREAD_COUNT = 8;
@@ -88,7 +75,6 @@ public class RethinkDbCrawlQueueAdapterIT {
         DbService.getInstance().getDbInitializer().initialize();
 
         queueAdapter = (RethinkDbCrawlQueueAdapter) DbService.getInstance().getCrawlQueueAdapter();
-        dbAdapter = (RethinkDbAdapter) DbService.getInstance().getDbAdapter();
     }
 
     @After
@@ -291,7 +277,7 @@ public class RethinkDbCrawlQueueAdapterIT {
 //        shouldRun = false;
 //        System.out.println();
 //
-//        try (Cursor<Map<String, Object>> response = dbAdapter.executeRequest("test",
+//        try (Cursor<Map<String, Object>> response = conn.executeRequest("test",
 //                r.table(Tables.CRAWL_HOST_GROUP.name));) {
 //            assertThat(finishLatch.getCount()).isZero();
 //            assertThat(response.iterator()).isEmpty();

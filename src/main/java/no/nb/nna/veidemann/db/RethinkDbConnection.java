@@ -29,7 +29,6 @@ import com.rethinkdb.model.OptArgs;
 import com.rethinkdb.net.Connection;
 import no.nb.nna.veidemann.commons.db.ConfigAdapter;
 import no.nb.nna.veidemann.commons.db.CrawlQueueAdapter;
-import no.nb.nna.veidemann.commons.db.DbAdapter;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbInitializer;
@@ -59,8 +58,6 @@ public class RethinkDbConnection implements DbServiceSPI {
     static final RethinkDB r = RethinkDB.r;
 
     private Connection conn;
-
-    private RethinkDbAdapter dbAdapter;
 
     private RethinkDbConfigAdapter configAdapter;
 
@@ -178,11 +175,6 @@ public class RethinkDbConnection implements DbServiceSPI {
     }
 
     @Override
-    public DbAdapter getDbAdapter() {
-        return dbAdapter;
-    }
-
-    @Override
     public ConfigAdapter getConfigAdapter() {
         return configAdapter;
     }
@@ -226,7 +218,6 @@ public class RethinkDbConnection implements DbServiceSPI {
         conn = connect(settings.getDbHost(), settings.getDbPort(), settings.getDbName(), settings.getDbUser(),
                 settings.getDbPassword(), 30);
 
-        dbAdapter = new RethinkDbAdapter(this);
         configAdapter = new RethinkDbConfigAdapter(this);
         queueAdapter = new RethinkDbCrawlQueueAdapter(this);
         executionsAdapter = new RethinkDbExecutionsAdapter(this);

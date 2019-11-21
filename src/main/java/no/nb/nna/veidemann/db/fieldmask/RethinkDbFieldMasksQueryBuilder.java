@@ -23,6 +23,7 @@ import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.ReqlFunction1;
 import com.rethinkdb.model.MapObject;
 import no.nb.nna.veidemann.db.ProtoUtils;
+import no.nb.nna.veidemann.db.fieldmask.Indexes.Index;
 import no.nb.nna.veidemann.db.fieldmask.MaskedObject.UpdateType;
 
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ import static com.rethinkdb.RethinkDB.r;
 
 public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder> {
     private Map<String, String> sortables = new HashMap<>();
+    private Indexes indexes = new Indexes();
     private List<String> readOnlyPaths = new ArrayList<>();
     private List<String> minimumReturnedFields = new ArrayList<>();
     private final ObjectOrMask<T> maskedObject;
@@ -47,6 +49,14 @@ public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder
 
     protected void addSortable(String path, String indexName) {
         sortables.put(path, indexName);
+    }
+
+    protected void addIndex(String indexName, String... path) {
+        indexes.addIndex(indexName, path);
+    }
+
+    public Index getBestIndex() {
+        return indexes.getBestIndex(maskedObject);
     }
 
     protected void addReadOnlyPath(String path) {
