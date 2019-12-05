@@ -69,6 +69,8 @@ public class RethinkDbConnection implements DbServiceSPI {
 
     private RethinkDbInitializer dbInitializer;
 
+    private boolean useRedisLock = false;
+
     public <T> T exec(ReqlAst qry) throws DbConnectionException, DbQueryException {
         return exec("db-query", qry);
     }
@@ -201,7 +203,11 @@ public class RethinkDbConnection implements DbServiceSPI {
 
     @Override
     public DistributedLock createDistributedLock(Key key, int expireSeconds) {
-        return new RethinkDbDistributedLock(this, key, expireSeconds);
+        if (useRedisLock) {
+            return new RedisDistributedLock(this, key, expireSeconds);
+        } else {
+            return new RethinkDbDistributedLock(this, key, expireSeconds);
+        }
     }
 
     @Override
@@ -214,6 +220,7 @@ public class RethinkDbConnection implements DbServiceSPI {
         return RethinkDbDistributedLock.listExpiredDistributedLocks(this);
     }
 
+    @Override
     public void connect(CommonSettings settings) throws DbConnectionException {
         conn = connect(settings.getDbHost(), settings.getDbPort(), settings.getDbName(), settings.getDbUser(),
                 settings.getDbPassword(), 30);
@@ -223,6 +230,9 @@ public class RethinkDbConnection implements DbServiceSPI {
         executionsAdapter = new RethinkDbExecutionsAdapter(this);
         eventAdapter = new RethinkDbEventAdapter(this);
         dbInitializer = new RethinkDbInitializer(this);
+        if (Integer.parseInt(System.getProperty("lock.redis.port", "0")) > 0) {
+            useRedisLock = true;
+        }
     }
 
     private Connection connect(String dbHost, int dbPort, String dbName, String dbUser, String dbPassword,
