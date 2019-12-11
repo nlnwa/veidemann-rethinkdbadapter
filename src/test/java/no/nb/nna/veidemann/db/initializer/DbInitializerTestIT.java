@@ -196,7 +196,7 @@ public class DbInitializerTestIT {
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.SEEDS.name))) {
             assertThat(configObjects.iterator())
-                    .hasSize(4)
+                    .hasSize(5)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
                         assertThat(r.get("kind")).isEqualTo("seed");
@@ -204,14 +204,16 @@ public class DbInitializerTestIT {
                         assertThat(r).containsKey("meta");
                         assertThat((Map) r.get("meta")).containsKey("name");
                         checkConfigRef((Map) r.get("seed"), "entityRef", Kind.crawlEntity);
-                        checkConfigRefList((Map) r.get("seed"), "jobRef", Kind.crawlJob);
+                        if (!r.get("id").equals("406188be-2c3a-49ce-813c-cea4fbb1fbf4")) {
+                            checkConfigRefList((Map) r.get("seed"), "jobRef", Kind.crawlJob);
+                        }
                     });
         }
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.SEEDS.name)
                 .getAll(r.array(Kind.crawlEntity.name(), "d816019f-103e-44b8-aa3b-93cd727104c6"))
                 .optArg("index", "configRefs"))) {
             assertThat(configObjects.iterator())
-                    .hasSize(1)
+                    .hasSize(2)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
                         assertThat(r.get("kind")).isEqualTo("seed");
@@ -219,7 +221,9 @@ public class DbInitializerTestIT {
                         assertThat(r).containsKey("meta");
                         assertThat((Map) r.get("meta")).containsKey("name");
                         checkConfigRef((Map) r.get("seed"), "entityRef", Kind.crawlEntity);
-                        checkConfigRefList((Map) r.get("seed"), "jobRef", Kind.crawlJob);
+                        if (!r.get("id").equals("406188be-2c3a-49ce-813c-cea4fbb1fbf4")) {
+                            checkConfigRefList((Map) r.get("seed"), "jobRef", Kind.crawlJob);
+                        }
                     });
         }
 

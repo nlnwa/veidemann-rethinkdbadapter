@@ -73,3 +73,19 @@ jobId:
 scope:
   surtPrefix: (no,hihm,
 
+---
+id: 406188be-2c3a-49ce-813c-cea4fbb1fbf4
+meta:
+  created: "2018-01-03T10:12:04.394Z"
+  createdBy: admin@nettarkivet.nb.no
+  description: ""
+  label:
+    - key: Group
+      value: Språkrådet
+  lastModified: "2018-01-03T10:12:04.394Z"
+  lastModifiedBy: admin@nettarkivet.nb.no
+  name: http://hinnlandet.no/
+disabled: false
+entityId: d816019f-103e-44b8-aa3b-93cd727104c6
+scope:
+  surtPrefix: (no,hinnlandet,
