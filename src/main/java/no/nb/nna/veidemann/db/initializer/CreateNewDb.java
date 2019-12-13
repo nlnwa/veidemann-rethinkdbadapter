@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 public class CreateNewDb extends TableCreator implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CreateNewDb.class);
 
-    public static final String DB_VERSION = "1.3";
+    public static final String DB_VERSION = "1.4";
 
     public CreateNewDb(String dbName, RethinkDbConnection conn) {
         super(dbName, conn);
@@ -89,13 +89,13 @@ public class CreateNewDb extends TableCreator implements Runnable {
 
     private void createConfigsTable() throws DbQueryException, DbConnectionException {
         createTable(Tables.CONFIG);
-        createIndex(Tables.CONFIG, "configRefs", true, row -> row
-                .g(Kind.browserConfig.name()).g("scriptRef").map(d -> r.array(d.g("kind"), d.g("id")))
-                .add(r.array(row.g(Kind.crawlJob.name()).g("scheduleRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
-                .add(r.array(row.g(Kind.crawlJob.name()).g("crawlConfigRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
-                .add(r.array(row.g(Kind.crawlConfig.name()).g("collectionRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
-                .add(r.array(row.g(Kind.crawlConfig.name()).g("browserConfigRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
-                .add(r.array(row.g(Kind.crawlConfig.name()).g("politenessRef").do_(d -> r.array(d.g("kind"), d.g("id")))))
+        createIndex(Tables.CONFIG, "configRefs", true, row ->
+                r.add(configRefPlural(row, Kind.browserConfig.name(), "scriptRef"))
+                        .add(configRefSingular(row, Kind.crawlJob.name(), "scheduleRef"))
+                        .add(configRefSingular(row, Kind.crawlJob.name(), "crawlConfigRef"))
+                        .add(configRefSingular(row, Kind.crawlConfig.name(), "collectionRef"))
+                        .add(configRefSingular(row, Kind.crawlConfig.name(), "browserConfigRef"))
+                        .add(configRefSingular(row, Kind.crawlConfig.name(), "politenessRef"))
         );
         createMetaIndexes(Tables.CONFIG);
     }
@@ -170,9 +170,9 @@ public class CreateNewDb extends TableCreator implements Runnable {
 
     private void createSeedsTable() throws DbQueryException, DbConnectionException {
         createTable(Tables.SEEDS);
-        createIndex(Tables.SEEDS, "configRefs", true, row -> row
-                .g(Kind.seed.name()).g("jobRef").map(d -> r.array(d.g("kind"), d.g("id")))
-                .add(r.array(row.g(Kind.seed.name()).g("entityRef").do_(d -> r.array(d.g("kind"), d.g("id"))))));
+        createIndex(Tables.SEEDS, "configRefs", true, row -> r.add(
+                configRefPlural(row, Kind.seed.name(), "jobRef"),
+                configRefSingular(row, Kind.seed.name(), "entityRef")));
         createMetaIndexes(Tables.SEEDS);
     }
 
