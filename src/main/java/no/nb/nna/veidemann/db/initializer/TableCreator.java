@@ -17,6 +17,8 @@
 package no.nb.nna.veidemann.db.initializer;
 
 import com.rethinkdb.RethinkDB;
+import com.rethinkdb.gen.ast.Branch;
+import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.ReqlFunction1;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbQueryException;
@@ -108,5 +110,35 @@ public class TableCreator {
         for (Entry<Tables, List<String>> t : createdIndexes.entrySet()) {
             conn.exec(r.table(t.getKey().name).indexWait(r.args(t.getValue())));
         }
+    }
+
+    /**
+     * Helper method to assist in creating configRefs index when configRef is plural
+     *
+     * @param row   ConfigObject
+     * @param kind  Kind of ConfigObject
+     * @param field Kind of the ConfigRef
+     * @return An array with config reference or empty array
+     */
+    Branch configRefPlural(ReqlExpr row, String kind, String field) {
+        return r.branch(
+                row.hasFields(kind).and(row.g(kind).hasFields(field)),
+                r.array(row.g(kind).g(field).map(d -> r.array(d.g("kind"), d.g("id")))),
+                r.array());
+    }
+
+    /**
+     * Helper method to assist in creating configRefs index when configRef is singular
+     *
+     * @param row   ConfigObject
+     * @param kind  Kind of ConfigObject
+     * @param field Kind of ConfigRef
+     * @return An array with config reference or empty array
+     */
+    Branch configRefSingular(ReqlExpr row, String kind, String field) {
+        return r.branch(
+                row.hasFields(kind).and(row.g(kind).hasFields(field)),
+                r.array(row.g(kind).g(field).do_(d -> r.array(d.g("kind"), d.g("id")))),
+                r.array());
     }
 }

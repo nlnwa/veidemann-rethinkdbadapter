@@ -196,7 +196,7 @@ public class DbInitializerTestIT {
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.SEEDS.name))) {
             assertThat(configObjects.iterator())
-                    .hasSize(4)
+                    .hasSize(5)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
                         assertThat(r.get("kind")).isEqualTo("seed");
@@ -204,14 +204,16 @@ public class DbInitializerTestIT {
                         assertThat(r).containsKey("meta");
                         assertThat((Map) r.get("meta")).containsKey("name");
                         checkConfigRef((Map) r.get("seed"), "entityRef", Kind.crawlEntity);
-                        checkConfigRefList((Map) r.get("seed"), "jobRef", Kind.crawlJob);
+                        if (!r.get("id").equals("406188be-2c3a-49ce-813c-cea4fbb1fbf4")) {
+                            checkConfigRefList((Map) r.get("seed"), "jobRef", Kind.crawlJob);
+                        }
                     });
         }
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.SEEDS.name)
                 .getAll(r.array(Kind.crawlEntity.name(), "d816019f-103e-44b8-aa3b-93cd727104c6"))
                 .optArg("index", "configRefs"))) {
             assertThat(configObjects.iterator())
-                    .hasSize(1)
+                    .hasSize(2)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
                         assertThat(r.get("kind")).isEqualTo("seed");
@@ -219,7 +221,9 @@ public class DbInitializerTestIT {
                         assertThat(r).containsKey("meta");
                         assertThat((Map) r.get("meta")).containsKey("name");
                         checkConfigRef((Map) r.get("seed"), "entityRef", Kind.crawlEntity);
-                        checkConfigRefList((Map) r.get("seed"), "jobRef", Kind.crawlJob);
+                        if (!r.get("id").equals("406188be-2c3a-49ce-813c-cea4fbb1fbf4")) {
+                            checkConfigRefList((Map) r.get("seed"), "jobRef", Kind.crawlJob);
+                        }
                     });
         }
 
@@ -257,6 +261,38 @@ public class DbInitializerTestIT {
                         assertThat(r).containsKey("crawlConfig");
                         assertThat((Map) r.get("crawlConfig")).containsKey("extra");
                         assertThat(((Map<String, Map>) r.get("crawlConfig")).get("extra")).containsEntry("createScreenshot", true);
+                    });
+        }
+
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
+                .getAll(r.array(Kind.crawlConfig.name(), "f8609d3f-9bf2-416c-ad50-7774b7d2dd95"))
+                .optArg("index", "configRefs"))) {
+            assertThat(configObjects.iterator())
+                    .hasSize(4)
+                    .allSatisfy(r -> {
+                        assertThat(r.get("apiVersion")).isEqualTo("v1");
+                        assertThat(r.get("kind")).isEqualTo("crawlJob");
+                        assertThat(r).containsKey("crawlJob");
+                        assertThat((Map) r.get("crawlJob")).containsKey("crawlConfigRef");
+                        assertThat(((Map<String, Map>) r.get("crawlJob")).get("crawlConfigRef")).containsEntry("id", "f8609d3f-9bf2-416c-ad50-7774b7d2dd95");
+                    });
+        }
+
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
+                .getAll(r.args(r.array(
+                        r.array(Kind.crawlConfig.name(), "f8609d3f-9bf2-416c-ad50-7774b7d2dd95"),
+                        r.array(Kind.crawlScheduleConfig.name(), "5604f0cc-315d-4091-8d6e-1b17a7eb990b"))))
+                .optArg("index", "configRefs"))) {
+            assertThat(configObjects.iterator())
+                    .hasSize(5)
+                    .allSatisfy(r -> {
+                        assertThat(r.get("apiVersion")).isEqualTo("v1");
+                        assertThat(r.get("kind")).isEqualTo("crawlJob");
+                        assertThat(r).containsKey("crawlJob");
+                        assertThat((Map<String, Map>) r.get("crawlJob")).containsKey("crawlConfigRef");
+                        if (r.get("id").equals("c856d12d-14e0-4554-9bc8-11189b8ab01f")) {
+                            assertThat(((Map<String, Map>) r.get("crawlJob")).get("scheduleRef")).containsEntry("id", "5604f0cc-315d-4091-8d6e-1b17a7eb990b");
+                        }
                     });
         }
 
