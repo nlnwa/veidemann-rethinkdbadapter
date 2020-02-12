@@ -204,7 +204,7 @@ public class RethinkDbConnection implements DbServiceSPI {
     @Override
     public DistributedLock createDistributedLock(Key key, int expireSeconds) {
         if (useRedisLock) {
-            return new RedisDistributedLock(this, key, expireSeconds);
+            return new RedisDistributedLock(this, key);
         } else {
             return new RethinkDbDistributedLock(this, key, expireSeconds);
         }

@@ -40,7 +40,7 @@ public class RedisDistributedLock implements DistributedLock {
     private final RethinkDbConnection conn;
     private final Key key;
     private String dbKey;
-    private final int expireSeconds;
+    private final int expireSeconds = 3600;
     private final String instanceId;
     private final static RedissonClient redisson;
     RLock lock;
@@ -58,7 +58,7 @@ public class RedisDistributedLock implements DistributedLock {
         }
     }
 
-    public RedisDistributedLock(RethinkDbConnection conn, Key key, int expireSeconds) {
+    public RedisDistributedLock(RethinkDbConnection conn, Key key) {
         Objects.requireNonNull(conn, "Database connection cannot be null");
         Objects.requireNonNull(key, "Lock key cannot be null");
         this.conn = conn;
@@ -69,7 +69,6 @@ public class RedisDistributedLock implements DistributedLock {
         } else {
             this.dbKey += key.getKey();
         }
-        this.expireSeconds = expireSeconds;
         this.instanceId = UUID.randomUUID().toString();
 
         lock = redisson.getLock(key.toString());
@@ -97,7 +96,13 @@ public class RedisDistributedLock implements DistributedLock {
     }
 
     public void unlock() throws DbQueryException, DbConnectionException {
-        lock.unlock();
+        if (lock.isHeldByCurrentThread()) {
+            try {
+                lock.unlock();
+            } catch (Exception e) {
+                LOG.warn("Could not release lock", e);
+            }
+        }
     }
 
     public String getInstanceId() {
