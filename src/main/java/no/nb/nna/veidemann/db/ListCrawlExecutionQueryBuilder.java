@@ -23,6 +23,9 @@ import no.nb.nna.veidemann.db.fieldmask.CrawlExecutionQueryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import static com.rethinkdb.RethinkDB.r;
 
 public class ListCrawlExecutionQueryBuilder {
@@ -62,10 +65,11 @@ public class ListCrawlExecutionQueryBuilder {
         }
 
         if (request.getStateCount() > 0) {
+            List<String> stateList = request.getStateList().stream().map(s -> s.name()).collect(Collectors.toList());
             if (q instanceof Table) {
-                q = ((Table) q).getAll(request.getStateList().toArray()).optArg("index", "state");
+                q = ((Table) q).getAll(stateList.toArray()).optArg("index", "state");
             } else {
-                q = q.filter(row -> r.expr(request.getStateList().toArray()).contains(row.g("state")));
+                q = q.filter(row -> r.expr(stateList.toArray()).contains(row.g("state")));
             }
         }
 
