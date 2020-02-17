@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 public class CreateNewDb extends TableCreator implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CreateNewDb.class);
 
-    public static final String DB_VERSION = "1.4";
+    public static final String DB_VERSION = "1.5";
 
     public CreateNewDb(String dbName, RethinkDbConnection conn) {
         super(dbName, conn);
@@ -144,7 +144,7 @@ public class CreateNewDb extends TableCreator implements Runnable {
 
     private void createCrawlExecutionsTable() throws DbQueryException, DbConnectionException {
         createTable(Tables.EXECUTIONS);
-        createIndex(Tables.EXECUTIONS, "createdTime");
+        createIndex(Tables.EXECUTIONS, "startTime");
         createIndex(Tables.EXECUTIONS, "jobId");
         createIndex(Tables.EXECUTIONS, "state");
         createIndex(Tables.EXECUTIONS, "seedId");
