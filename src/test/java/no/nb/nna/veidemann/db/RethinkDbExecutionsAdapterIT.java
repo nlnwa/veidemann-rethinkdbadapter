@@ -531,6 +531,13 @@ public class RethinkDbExecutionsAdapterIT {
                 .hasSize(1)
                 .containsExactlyInAnyOrder(ces1);
 
+        request = CrawlExecutionsListRequest.newBuilder();
+        request.addState(CrawlExecutionStatus.State.CREATED);
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(3)
+                .containsExactlyInAnyOrder(ces1, ces2, ces3);
+
         // Test watch query
         request = CrawlExecutionsListRequest.newBuilder().setWatch(true);
         ChangeFeed<CrawlExecutionStatus> feed = executionsAdapter.listCrawlExecutionStatus(request.build());
