@@ -118,7 +118,7 @@ public class ListJobExecutionQueryBuilder {
         } else {
             Object f = from;
             Object t = to;
-            q = q.filter(row -> row.g("startTime").ge(f).and(row.g("startId").lt(t)));
+            q = q.filter(row -> row.g("startTime").ge(f).and(row.g("startTime").lt(t)));
         }
     }
 }
