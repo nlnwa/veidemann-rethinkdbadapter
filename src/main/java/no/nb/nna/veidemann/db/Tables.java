@@ -24,7 +24,6 @@ public enum Tables {
     URI_QUEUE("uri_queue", QueuedUri.getDefaultInstance()),
     EXECUTIONS("executions", CrawlExecutionStatus.getDefaultInstance()),
     JOB_EXECUTIONS("job_executions", JobExecutionStatus.getDefaultInstance()),
-    CRAWL_HOST_GROUP("crawl_host_group", CrawlHostGroup.getDefaultInstance()),
     CRAWL_ENTITIES("config_crawl_entities", ConfigObject.getDefaultInstance()),
     SEEDS("config_seeds", ConfigObject.getDefaultInstance()),
     STORAGE_REF("storage_ref", StorageRef.getDefaultInstance()),

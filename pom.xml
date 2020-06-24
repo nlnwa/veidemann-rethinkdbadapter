@@ -17,7 +17,8 @@
         <initializer.image.name>veidemann-db-initializer</initializer.image.name>
         <log4j.version>2.13.3</log4j.version>
 
-        <veidemann-commons-version>0.4.5</veidemann-commons-version>
+        <veidemann.api.version>1.0.0-beta18</veidemann.api.version>
+        <veidemann.commons.version>0.4.7-refactor_frontier</veidemann.commons.version>
 
         <!--Docker container versions forintegration tests-->
         <rethinkdb.version>2.4.1</rethinkdb.version>
@@ -44,8 +45,13 @@
     <dependencies>
         <dependency>
             <groupId>com.github.nlnwa</groupId>
+            <artifactId>veidemann-api</artifactId>
+            <version>${veidemann.api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.nlnwa</groupId>
             <artifactId>veidemann-commons</artifactId>
-            <version>${veidemann-commons-version}</version>
+            <version>${veidemann.commons.version}</version>
         </dependency>
         <dependency>
             <groupId>com.rethinkdb</groupId>

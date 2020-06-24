@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 public class CreateNewDb extends TableCreator implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CreateNewDb.class);
 
-    public static final String DB_VERSION = "1.8";
+    public static final String DB_VERSION = "1.9";
 
     public CreateNewDb(String dbName, RethinkDbConnection conn) {
         super(dbName, conn);
@@ -63,14 +63,9 @@ public class CreateNewDb extends TableCreator implements Runnable {
         createJobExecutionsTable();
         createCrawlEntitiesTable();
         createSeedsTable();
-        createCrawlHostGroupTable();
         createEventTable();
 
         waitForIndexes();
-    }
-
-    private boolean tableExists(String tableName) throws DbQueryException, DbConnectionException {
-        return conn.exec(r.tableList().contains(tableName));
     }
 
     private void createSystemTable() throws DbQueryException, DbConnectionException {
@@ -104,11 +99,6 @@ public class CreateNewDb extends TableCreator implements Runnable {
         createTable(Tables.LOCKS);
     }
 
-    private void createCrawlHostGroupTable() throws DbQueryException, DbConnectionException {
-        createTable(Tables.CRAWL_HOST_GROUP);
-        createIndex(Tables.CRAWL_HOST_GROUP, "nextFetchTime");
-    }
-
     private void createCrawlLogTable() throws DbQueryException, DbConnectionException {
         createTable(Tables.CRAWL_LOG, "warcId");
         createIndex(Tables.CRAWL_LOG, "executionId");
@@ -134,12 +124,6 @@ public class CreateNewDb extends TableCreator implements Runnable {
 
     private void createUriQueueTable() throws DbQueryException, DbConnectionException {
         createTable(Tables.URI_QUEUE);
-        createIndex(Tables.URI_QUEUE, "surt");
-        createIndex(Tables.URI_QUEUE, "executionId");
-        createIndex(Tables.URI_QUEUE, "crawlHostGroupKey_sequence_earliestFetch", uri -> r.array(uri.g("crawlHostGroupId"),
-                uri.g("politenessRef").g("id"),
-                uri.g("sequence"),
-                uri.g("earliestFetchTimeStamp")));
     }
 
     private void createCrawlExecutionsTable() throws DbQueryException, DbConnectionException {

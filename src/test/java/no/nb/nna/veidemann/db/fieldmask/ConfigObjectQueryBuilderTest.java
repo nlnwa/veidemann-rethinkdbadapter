@@ -119,8 +119,12 @@ public class ConfigObjectQueryBuilderTest {
         String decompiled = dc.toString();
 
         ReqlExpr expected = r.table("table").insert((ReqlFunction1) row ->
-                r.hashMap("crawlConfig", r.hashMap("priorityWeight", 2.0).with("extra", null))
-                        .with("meta", r.hashMap("name", "").with("description", "").with("label", r.array()))
+                r.hashMap("crawlConfig", r.hashMap("priorityWeight", 2.0)
+                        .with("extra", null))
+                        .with("meta", r.hashMap("name", "")
+                                .with("description", "")
+                                .with("label", r.array())
+                                .with("annotation", r.array()))
         ).optArg("conflict", (id, old_doc, new_doc) -> r.branch(
                 old_doc.eq(new_doc),
                 old_doc,
