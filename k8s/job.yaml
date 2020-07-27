@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: veidemann-db-initializer
+  labels:
+    app.kubernetes.io/name: veidemann-db-initializer
+spec:
+  ttlSecondsAfterFinished: 60
+  backoffLimit: 1
+  template:
+    metadata:
+      name: veidemann-db-initializer
+      labels:
+        app.kubernetes.io/name: veidemann-db-initializer
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: veidemann-db-initializer
+          image: norsknettarkiv/veidemann-db-initializer
+          envFrom:
+            - secretRef:
+                name: veidemann-db-initializer-secret
+          env:
+            - name: DB_HOST
+              value: "rethinkdb-proxy"
