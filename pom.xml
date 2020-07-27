@@ -15,7 +15,7 @@
         <docker.tag>${project.version}</docker.tag>
 
         <initializer.image.name>veidemann-db-initializer</initializer.image.name>
-        <log4j.version>2.12.1</log4j.version>
+        <log4j.version>2.13.3</log4j.version>
 
         <veidemann-commons-version>0.4.5</veidemann-commons-version>
 
