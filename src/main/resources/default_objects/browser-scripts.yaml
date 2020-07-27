@@ -1,28 +1,106 @@
-apiVersion: "v1"
-kind: "browserScript"
-meta:
-  name: "extract-outlinks.js"
-  description: "Script which extracts outlinks from <a href> tags"
-  label:
-  - key: "scope"
-    value: "default"
-  - key: "type"
-    value: "extract_outlinks"
+apiVersion: v1
 browserScript:
+  browserScriptType: EXTRACT_OUTLINKS
   script: |
-    var __brzl_framesDone = new Set();
-    var __brzl_compileOutlinks = function(frame) {
-        __brzl_framesDone.add(frame);
+    (function extractOutlinks(frame) {
+      const framesDone = new Set();
+
+      function compileOutlinks(frame) {
+        framesDone.add(frame);
         if (frame && frame.document) {
-            var outlinks = Array.prototype.slice.call(frame.document.querySelectorAll('a[href]'));
-            for (var i = 0; i < frame.frames.length; i++) {
-                if (frame.frames[i] && !__brzl_framesDone.has(frame.frames[i])) {
-                    try {
-                        outlinks = outlinks.concat(__brzl_compileOutlinks(frame.frames[i]));
-                    } catch {}
-                }
+          let outlinks = Array.from(frame.document.links);
+          for (var i = 0; i < frame.frames.length; i++) {
+            if (frame.frames[i] && !framesDone.has(frame.frames[i])) {
+              try {
+                outlinks = outlinks.concat(compileOutlinks(frame.frames[i]));
+              } catch {}
             }
+          }
+          return outlinks;
         }
-        return outlinks;
+        return [];
+      }
+
+      return compileOutlinks(frame).map(_ => _.href);
+    )(window);
+  urlRegexp: []
+kind: browserScript
+meta:
+  annotation: []
+  description: Script which extracts outlinks from <a href> tags
+  label:
+    - key: scope
+      value: default
+  name: extract-outlinks.js
+
+---
+
+apiVersion: v1
+browserScript:
+  browserScriptType: ON_LOAD
+  script: |
+    function scroll({count} = {}) {
+      // first iteration of this scripts is string representation of arguments
+      const c = parseInt(count, 10);
+
+      // height of visible area of window
+      const windowHeight = window.innerHeight;
+
+      // height of scrollable area
+      const scrollHeight = document.documentElement.scrollHeight;
+
+      // how far to scroll to top
+      const scrollTop = Math.ceil(document.documentElement.scrollTop);
+
+      // determine if it is possible to scroll further down
+      const canScrollMore = scrollHeight > (scrollTop + windowHeight);
+
+      if (c > 0 && canScrollMore) {
+        // scroll down height of window
+        document.documentElement.scrollBy(0, windowHeight);
+
+        return {
+          waitForData: true,
+          next: 'self',
+          data: {count: c - 1}
+        };
+      }
+
+      return {
+        waitForData: false,
+        next: 'scrollTo.js',
+        data: {x: 0, y: 0}
+      };
     }
-    __brzl_compileOutlinks(window).join('\n');
+  urlRegexp: []
+kind: browserScript
+meta:
+  description: Scroll down maxPages
+  label:
+    - key: scope
+      value: default
+  name: scroll.js
+
+---
+
+apiVersion: v1
+browserScript:
+  browserScriptType: UNDEFINED
+  script: |
+    function scrollTo({x = 0, y = 0} = {}) {
+      window.scrollTo(x, y);
+      return {
+        waitForData: true,
+        next: '',
+        data: null,
+      };
+    }
+  urlRegexp: []
+kind: browserScript
+meta:
+  annotation: []
+  description: Scroll to (x, y)
+  label:
+    - key: scope
+      value: default
+  name: scrollTo.js
