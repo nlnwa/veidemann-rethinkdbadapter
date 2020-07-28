@@ -39,7 +39,7 @@ apiVersion: v1
 browserScript:
   browserScriptType: ON_LOAD
   script: |
-    function scroll({count} = {}) {
+    function scroll({count = 100} = {}) {
       // first iteration of this scripts is string representation of arguments
       const c = parseInt(count, 10);
 
