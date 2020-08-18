@@ -53,7 +53,7 @@ public class Upgrade1_6To1_7 extends UpgradeDbBase {
                 .optArg("index", "name").delete());
         // remove all scripts named "scrollTo.js"
         conn.exec(r.db(dbName).table(Tables.CONFIG.name)
-                .getAll("scrollTo.js")
+                .getAll("scrollTo.js".toLowerCase())
                 .optArg("index", "name").delete());
 
         // Save new browser scripts
