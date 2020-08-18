@@ -32,6 +32,8 @@ meta:
   label:
     - key: scope
       value: default
+    - key: type
+      value: extract_outlinks
   name: extract-outlinks.js
 
 ---
