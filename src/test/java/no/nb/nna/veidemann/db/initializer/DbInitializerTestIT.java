@@ -86,7 +86,7 @@ public class DbInitializerTestIT {
                 .coerceTo("object")
         );
         assertThat(o.get("politenessConfig")).isEqualTo(1L);
-        assertThat(o.get("browserScript")).isEqualTo(1L);
+        assertThat(o.get("browserScript")).isEqualTo(3L);
         assertThat(o.get("crawlJob")).isEqualTo(4L);
         assertThat(o.get("browserConfig")).isEqualTo(1L);
         assertThat(o.get("crawlConfig")).isEqualTo(1L);
@@ -94,7 +94,7 @@ public class DbInitializerTestIT {
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name))) {
             assertThat(configObjects.iterator())
-                    .hasSize(13)
+                    .hasSize(15)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
                         assertThat(r).containsKey("kind");
@@ -176,7 +176,7 @@ public class DbInitializerTestIT {
                 .coerceTo("object")
         );
         assertThat(o.get("politenessConfig")).isEqualTo(1L);
-        assertThat(o.get("browserScript")).isEqualTo(1L);
+        assertThat(o.get("browserScript")).isEqualTo(3L);
         assertThat(o.get("crawlJob")).isEqualTo(4L);
         assertThat(o.get("browserConfig")).isEqualTo(1L);
         assertThat(o.get("crawlConfig")).isEqualTo(1L);
@@ -184,7 +184,7 @@ public class DbInitializerTestIT {
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name))) {
             assertThat(configObjects.iterator())
-                    .hasSize(13)
+                    .hasSize(15)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
                         assertThat(r).containsKey("kind");
