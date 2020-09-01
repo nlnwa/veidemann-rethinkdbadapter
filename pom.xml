@@ -20,7 +20,7 @@
         <veidemann-commons-version>0.4.5</veidemann-commons-version>
 
         <!--Docker container versions forintegration tests-->
-        <rethinkdb.version>2.3.6</rethinkdb.version>
+        <rethinkdb.version>2.4.1</rethinkdb.version>
     </properties>
 
     <repositories>
@@ -250,12 +250,7 @@
                                                     <enabled>true</enabled>
                                                 </log>
                                                 <wait>
-                                                    <tcp>
-                                                        <mode>mapped</mode>
-                                                        <ports>
-                                                            <port>28015</port>
-                                                        </ports>
-                                                    </tcp>
+                                                    <log>Server ready.*</log>
                                                     <time>20000</time>
                                                 </wait>
                                             </run>
