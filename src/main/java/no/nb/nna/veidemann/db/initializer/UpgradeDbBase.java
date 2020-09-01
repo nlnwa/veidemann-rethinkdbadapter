@@ -15,14 +15,22 @@
  */
 package no.nb.nna.veidemann.db.initializer;
 
+import com.google.protobuf.Message;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbQueryException;
 import no.nb.nna.veidemann.commons.db.DbUpgradeException;
+import no.nb.nna.veidemann.db.ProtoUtils;
 import no.nb.nna.veidemann.db.RethinkDbConnection;
 import no.nb.nna.veidemann.db.Tables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.InputStream;
+import java.util.Map;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public abstract class UpgradeDbBase extends TableCreator implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(UpgradeDbBase.class);
@@ -54,4 +62,10 @@ public abstract class UpgradeDbBase extends TableCreator implements Runnable {
     abstract String fromVersion();
 
     abstract String toVersion();
+
+    protected static <T extends Message> Stream<T> readYamlFile(InputStream in, Class<T> type) {
+        Yaml yaml = new Yaml();
+        return StreamSupport.stream(yaml.loadAll(in).spliterator(), false)
+                .map(o -> ProtoUtils.rethinkToProto((Map) o, type));
+    }
 }

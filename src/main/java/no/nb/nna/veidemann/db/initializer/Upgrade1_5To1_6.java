@@ -15,23 +15,17 @@
  */
 package no.nb.nna.veidemann.db.initializer;
 
-import com.google.protobuf.Message;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbQueryException;
 import no.nb.nna.veidemann.commons.db.DbService;
-import no.nb.nna.veidemann.db.ProtoUtils;
 import no.nb.nna.veidemann.db.RethinkDbConfigAdapter;
 import no.nb.nna.veidemann.db.RethinkDbConnection;
-import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.util.Map;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 
 public class Upgrade1_5To1_6 extends UpgradeDbBase {
@@ -56,12 +50,6 @@ public class Upgrade1_5To1_6 extends UpgradeDbBase {
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
-    }
-
-    <T extends Message> Stream<T> readYamlFile(InputStream in, Class<T> type) {
-        Yaml yaml = new Yaml();
-        return StreamSupport.stream(yaml.loadAll(in).spliterator(), false)
-                .map(o -> ProtoUtils.rethinkToProto((Map) o, type));
     }
 
     @Override
