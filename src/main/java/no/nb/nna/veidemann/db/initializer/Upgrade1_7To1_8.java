@@ -22,29 +22,38 @@ import no.nb.nna.veidemann.commons.db.DbQueryException;
 import no.nb.nna.veidemann.commons.db.DbService;
 import no.nb.nna.veidemann.db.RethinkDbConfigAdapter;
 import no.nb.nna.veidemann.db.RethinkDbConnection;
+import no.nb.nna.veidemann.db.Tables;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 
-
-public class Upgrade1_5To1_6 extends UpgradeDbBase {
-    public Upgrade1_5To1_6(String dbName, RethinkDbConnection conn) {
+// This upgrade fixes a regression in version 1.7 (bug in the scroll.js script)
+public class Upgrade1_7To1_8 extends UpgradeDbBase {
+    public Upgrade1_7To1_8(String dbName, RethinkDbConnection conn) {
         super(dbName, conn);
     }
 
     final void upgrade() throws DbQueryException, DbConnectionException {
         RethinkDbConfigAdapter db = (RethinkDbConfigAdapter) DbService.getInstance().getConfigAdapter();
 
-        // upgrade browser scripts
+        // bad script id
+        final String scrollScriptId = "75dfe01a-e9cc-4fd2-8aa5-c04878d9f1a1";
+
+        // delete bad script
+        conn.exec(r.db(dbName).table(Tables.CONFIG.name).get(scrollScriptId).delete());
+
+        // save good script
         try (InputStream in = getClass().getClassLoader()
                 .getResourceAsStream("default_objects/browser-scripts.yaml")) {
             readYamlFile(in, ConfigObject.class)
                     .forEach(o -> {
-                        try {
-                            db.saveConfigObject(o);
-                        } catch (DbException e) {
-                            throw new RuntimeException(e);
+                        if (o.getId().equals(scrollScriptId)) {
+                            try {
+                                db.saveConfigObject(o);
+                            } catch (DbException e) {
+                                throw new RuntimeException(e);
+                            }
                         }
                     });
         } catch (IOException ex) {
@@ -54,11 +63,11 @@ public class Upgrade1_5To1_6 extends UpgradeDbBase {
 
     @Override
     String fromVersion() {
-        return "1.5";
+        return "1.7";
     }
 
     @Override
     String toVersion() {
-        return "1.6";
+        return "1.8";
     }
 }

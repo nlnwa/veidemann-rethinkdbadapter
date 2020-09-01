@@ -15,31 +15,18 @@
  */
 package no.nb.nna.veidemann.db.initializer;
 
-import com.google.protobuf.Message;
-import com.rethinkdb.gen.ast.GetField;
-import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.ReqlFunction1;
-import com.rethinkdb.model.MapObject;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject;
 import no.nb.nna.veidemann.api.config.v1.Kind;
 import no.nb.nna.veidemann.api.config.v1.ListRequest;
-import no.nb.nna.veidemann.commons.db.ChangeFeed;
-import no.nb.nna.veidemann.commons.db.DbConnectionException;
-import no.nb.nna.veidemann.commons.db.DbException;
-import no.nb.nna.veidemann.commons.db.DbQueryException;
-import no.nb.nna.veidemann.commons.db.DbService;
-import no.nb.nna.veidemann.db.ProtoUtils;
+import no.nb.nna.veidemann.commons.db.*;
 import no.nb.nna.veidemann.db.RethinkDbConfigAdapter;
 import no.nb.nna.veidemann.db.RethinkDbConnection;
 import no.nb.nna.veidemann.db.Tables;
-import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 
 public class Upgrade1_0To1_1 extends UpgradeDbBase {
@@ -198,11 +185,5 @@ public class Upgrade1_0To1_1 extends UpgradeDbBase {
                     )
             ));
         }
-    }
-
-    <T extends Message> Stream<T> readYamlFile(InputStream in, Class<T> type) {
-        Yaml yaml = new Yaml();
-        return StreamSupport.stream(yaml.loadAll(in).spliterator(), false)
-                .map(o -> ProtoUtils.rethinkToProto((Map) o, type));
     }
 }

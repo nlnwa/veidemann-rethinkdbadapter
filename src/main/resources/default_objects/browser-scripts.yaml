@@ -43,38 +43,36 @@ id: 75dfe01a-e9cc-4fd2-8aa5-c04878d9f1a1
 browserScript:
   browserScriptType: ON_LOAD
   script: |
-    function scroll({count = 100} = {}) {
-      // first iteration of this scripts is string representation of arguments
-      const c = parseInt(count, 10);
+    function scroll ({ count = 100 } = {}) {
+      // first iteration of this scripts use a string representation of argument
+      const c = parseInt(count, 10)
 
       // height of visible area of window
-      const windowHeight = window.innerHeight;
+      const windowHeight = window.innerHeight
 
       // height of scrollable area
-      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollHeight = document.documentElement.scrollHeight
 
-      // how far to scroll to top
-      const scrollTop = Math.ceil(document.documentElement.scrollTop);
-
-      // determine if it is possible to scroll further down
-      const canScrollMore = scrollHeight > (scrollTop + windowHeight);
-
-      if (c > 0 && canScrollMore) {
+      if (c > 0 && scrollHeight > window.pageYOffset + windowHeight) {
         // scroll down height of window
-        document.documentElement.scrollBy(0, windowHeight);
+        window.scrollBy(0, windowHeight)
 
-        return {
-          waitForData: true,
-          next: 'self',
-          data: {count: c - 1}
-        };
+        if (c - 1 > 0 && scrollHeight > window.pageYOffset + windowHeight) {
+          return {
+            waitForData: true,
+            next: 'self',
+            data: {
+              count: c - 1,
+            }
+          }
+        }
       }
 
       return {
         waitForData: false,
         next: 'scrollTo.js',
-        data: {x: 0, y: 0}
-      };
+        data: { x: 0, y: 0 }
+      }
     }
   urlRegexp: []
 kind: browserScript
