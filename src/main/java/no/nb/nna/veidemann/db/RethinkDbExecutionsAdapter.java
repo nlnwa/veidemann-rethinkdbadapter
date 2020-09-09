@@ -34,8 +34,6 @@ import no.nb.nna.veidemann.api.report.v1.ListCountResponse;
 import no.nb.nna.veidemann.api.report.v1.PageLogListRequest;
 import no.nb.nna.veidemann.commons.db.ChangeFeed;
 import no.nb.nna.veidemann.commons.db.DbException;
-import no.nb.nna.veidemann.commons.db.DistributedLock;
-import no.nb.nna.veidemann.commons.db.DistributedLock.Key;
 import no.nb.nna.veidemann.commons.db.ExecutionsAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,6 +113,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
 
         return new ChangeFeedBase<JobExecutionStatus>(res) {
             @Override
+            @SuppressWarnings("unchecked")
             protected Function<Map<String, Object>, JobExecutionStatus> mapper() {
                 return co -> {
                     // In case of a change feed, the real object is stored in new_val
@@ -125,8 +124,31 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
                             return null;
                         }
                     }
-                    JobExecutionStatus res = ProtoUtils.rethinkToProto(co, JobExecutionStatus.class);
-                    return res;
+                    JobExecutionStatus jes = ProtoUtils.rethinkToProto(co, JobExecutionStatus.class);
+                    if (!jes.hasEndTime()) {
+                        LOG.debug("JobExecution '{}' is still running. Aggregating stats snapshot", jes.getId());
+                        try {
+                            Map sums = summarizeJobExecutionStats(jes.getId());
+
+                            JobExecutionStatus.Builder jesBuilder = jes.toBuilder()
+                                    .setDocumentsCrawled((long) sums.get("documentsCrawled"))
+                                    .setDocumentsDenied((long) sums.get("documentsDenied"))
+                                    .setDocumentsFailed((long) sums.get("documentsFailed"))
+                                    .setDocumentsOutOfScope((long) sums.get("documentsOutOfScope"))
+                                    .setDocumentsRetried((long) sums.get("documentsRetried"))
+                                    .setUrisCrawled((long) sums.get("urisCrawled"))
+                                    .setBytesCrawled((long) sums.get("bytesCrawled"));
+
+                            for (CrawlExecutionStatus.State s : CrawlExecutionStatus.State.values()) {
+                                jesBuilder.putExecutionsState(s.name(), ((Long) sums.get(s.name())).intValue());
+                            }
+
+                            jes = jesBuilder.build();
+                        } catch (DbException ex) {
+                            // DB error; skip calculating runtime sum
+                        }
+                    }
+                    return jes;
                 };
             }
         };
@@ -166,69 +188,6 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
         return result;
     }
 
-    private void updateJobExecution(String jobExecutionId) throws DbException {
-        DistributedLock lock = conn.createDistributedLock(new Key("jobexe", jobExecutionId), 300);
-        lock.lock();
-        try {
-            // Get a count of still running CrawlExecutions for this execution's JobExecution
-            Long notEndedCount = conn.exec("db-updateJobExecution",
-                    r.table(Tables.EXECUTIONS.name)
-                            .between(r.array(jobExecutionId, r.minval()), r.array(jobExecutionId, r.maxval()))
-                            .optArg("index", "jobExecutionId_seedId")
-                            .filter(row -> row.g("state").match("UNDEFINED|CREATED|FETCHING|SLEEPING"))
-                            .count()
-            );
-
-            // If all CrawlExecutions are done for this JobExectuion, update the JobExecution with end statistics
-            if (notEndedCount == 0) {
-                LOG.debug("JobExecution '{}' finished, saving stats", jobExecutionId);
-
-                // Fetch the JobExecutionStatus object this CrawlExecution is part of
-                JobExecutionStatus jes = conn.executeGet("db-getJobExecutionStatus",
-                        r.table(Tables.JOB_EXECUTIONS.name).get(jobExecutionId),
-                        JobExecutionStatus.class);
-                if (jes == null) {
-                    throw new IllegalStateException("Can't find JobExecution: " + jobExecutionId);
-                }
-
-                // Set JobExecution's status to FINISHED if it wasn't already aborted
-                JobExecutionStatus.State state;
-                switch (jes.getState()) {
-                    case DIED:
-                    case FAILED:
-                    case ABORTED_MANUAL:
-                        state = jes.getState();
-                        break;
-                    default:
-                        state = JobExecutionStatus.State.FINISHED;
-                        break;
-                }
-
-                // Update aggregated statistics
-                Map sums = summarizeJobExecutionStats(jobExecutionId);
-                JobExecutionStatus.Builder jesBuilder = jes.toBuilder()
-                        .setState(state)
-                        .setEndTime(ProtoUtils.getNowTs())
-                        .setDocumentsCrawled((long) sums.get("documentsCrawled"))
-                        .setDocumentsDenied((long) sums.get("documentsDenied"))
-                        .setDocumentsFailed((long) sums.get("documentsFailed"))
-                        .setDocumentsOutOfScope((long) sums.get("documentsOutOfScope"))
-                        .setDocumentsRetried((long) sums.get("documentsRetried"))
-                        .setUrisCrawled((long) sums.get("urisCrawled"))
-                        .setBytesCrawled((long) sums.get("bytesCrawled"));
-
-                for (CrawlExecutionStatus.State s : CrawlExecutionStatus.State.values()) {
-                    jesBuilder.putExecutionsState(s.name(), ((Long) sums.get(s.name())).intValue());
-                }
-
-                conn.exec("db-saveJobExecutionStatus",
-                        r.table(Tables.JOB_EXECUTIONS.name).get(jesBuilder.getId()).update(ProtoUtils.protoToRethink(jesBuilder)));
-            }
-        } finally {
-            lock.unlock();
-        }
-    }
-
     @Override
     public CrawlExecutionStatus getCrawlExecutionStatus(String crawlExecutionId) throws DbException {
         Map<String, Object> response = conn.exec("db-getExecutionStatus",
@@ -247,6 +206,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
 
         return new ChangeFeedBase<CrawlExecutionStatus>(res) {
             @Override
+            @SuppressWarnings("unchecked")
             protected Function<Map<String, Object>, CrawlExecutionStatus> mapper() {
                 return co -> {
                     // In case of a change feed, the real object is stored in new_val
@@ -266,22 +226,16 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
 
     @Override
     public CrawlExecutionStatus setCrawlExecutionStateAborted(String crawlExecutionId) throws DbException {
-        DistributedLock lock = conn.createDistributedLock(new Key("crawlexe", crawlExecutionId), 60);
-        lock.lock();
-        try {
-            return conn.executeUpdate("db-setExecutionStateAborted",
-                    r.table(Tables.EXECUTIONS.name)
-                            .get(crawlExecutionId)
-                            .update(
-                                    doc -> r.branch(
-                                            doc.hasFields("endTime"),
-                                            r.hashMap(),
-                                            r.hashMap("state", CrawlExecutionStatus.State.ABORTED_MANUAL.name()))
-                            ),
-                    CrawlExecutionStatus.class);
-        } finally {
-            lock.unlock();
-        }
+        return conn.executeUpdate("db-setExecutionStateAborted",
+                r.table(Tables.EXECUTIONS.name)
+                        .get(crawlExecutionId)
+                        .update(
+                                doc -> r.branch(
+                                        doc.hasFields("endTime"),
+                                        r.hashMap(),
+                                        r.hashMap("state", CrawlExecutionStatus.State.ABORTED_MANUAL.name()))
+                        ),
+                CrawlExecutionStatus.class);
     }
 
     @Override
@@ -377,6 +331,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
 
         return new ChangeFeedBase<CrawlLog>(res) {
             @Override
+            @SuppressWarnings("unchecked")
             protected Function<Map<String, Object>, CrawlLog> mapper() {
                 return co -> {
                     // In case of a change feed, the real object is stored in new_val
@@ -423,6 +378,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
 
         return new ChangeFeedBase<PageLog>(res) {
             @Override
+            @SuppressWarnings("unchecked")
             protected Function<Map<String, Object>, PageLog> mapper() {
                 return co -> {
                     // In case of a change feed, the real object is stored in new_val
@@ -462,6 +418,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean setDesiredPausedState(boolean value) throws DbException {
         String id = "state";
         String key = "shouldPause";

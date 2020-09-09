@@ -201,6 +201,7 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
 
     @Override
     public LogLevels saveLogConfig(LogLevels logLevels) throws DbException {
+        @SuppressWarnings("unchecked")
         Map<String, Object> doc = ProtoUtils.protoToRethink(logLevels);
         doc.put("id", "log_levels");
         return conn.executeInsert("save-logconfig",
@@ -210,175 +211,6 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
                 LogLevels.class
         );
     }
-
-//    public static Map<String, Object> convertOldToV1Api(Kind kind, Map<String, Object> old) {
-//        String[] fieldNames = old.keySet().toArray(new String[0]);
-//        MapObject spec = r.hashMap();
-//        for (String key : fieldNames) {
-//            switch (key) {
-//                case "id":
-//                case "meta":
-//                case "kind":
-//                case "apiVersion":
-//                    break;
-//                case "sleepAfterPageloadMs":
-//                    spec.put("maxInactivityTimeMs", old.remove(key));
-//                    break;
-//                case "entityId":
-//                    spec.put("entityRef", r.hashMap("kind", Kind.crawlEntity.name()).with("id", old.remove(key)));
-//                    break;
-//                case "jobId":
-//                    refToId(spec, old, "job", Kind.crawlJob);
-//                    break;
-//                case "scheduleId":
-//                    refToId(spec, old, "schedule", Kind.crawlScheduleConfig);
-//                    break;
-//                case "crawlConfigId":
-//                    refToId(spec, old, "crawlConfig", Kind.crawlConfig);
-//                    break;
-//                case "collectionId":
-//                    refToId(spec, old, "collection", Kind.collection);
-//                    break;
-//                case "browserConfigId":
-//                    refToId(spec, old, "browserConfig", Kind.browserConfig);
-//                    break;
-//                case "politenessId":
-//                    refToId(spec, old, "politeness", Kind.politenessConfig);
-//                    break;
-//                case "scriptId":
-//                    refToId(spec, old, "script", Kind.browserScript);
-//                    break;
-//                case "extra":
-//                    Map extra = (Map) old.remove(key);
-//                    if (extra.containsKey("createSnapshot")) {
-//                        extra.put("createScreenshot", extra.remove("createSnapshot"));
-//                        spec.put(key, extra);
-//                    }
-//                    break;
-//                default:
-//                    spec.put(key, old.remove(key));
-//                    break;
-//            }
-//        }
-//        old.put("apiVersion", "v1");
-//        old.put("kind", kind.name());
-//        old.put(kind.name(), spec);
-//        return old;
-//    }
-
-//    private static void refToId(MapObject spec, Map<String, Object> old, String name, Kind kind) {
-//        Object oldVal = old.remove(name + "Id");
-//        if (oldVal instanceof List) {
-//            List refs = r.array();
-//            for (String id : (List<String>) oldVal) {
-//                refs.add(r.hashMap("kind", kind.name()).with("id", id));
-//            }
-//            spec.put(name + "Ref", refs);
-//        } else {
-//            spec.put(name + "Ref", r.hashMap("kind", kind.name()).with("id", oldVal));
-//        }
-//    }
-
-//    public static Map<String, Object> convertV1ToOldApi(Map<String, Object> v1) {
-//        Kind kind = Kind.valueOf((String) v1.get("kind"));
-//        if (v1.containsKey(kind.name())) {
-//            v1.putAll((Map) v1.remove(kind.name()));
-//        }
-//
-//        switch (kind) {
-//            case seed:
-//                idToRef(v1, "entity");
-//                idToRef(v1, "job");
-//                break;
-//            case crawlJob:
-//                idToRef(v1, "schedule");
-//                idToRef(v1, "crawlConfig");
-//                break;
-//            case crawlConfig:
-//                idToRef(v1, "collection");
-//                idToRef(v1, "browserConfig");
-//                idToRef(v1, "politeness");
-//                if (v1.containsKey("extra") && ((Map) v1.get("extra")).containsKey("createScreenshot")) {
-//                    ((Map) v1.get("extra")).put("createSnapshot", ((Map) v1.get("extra")).remove("createScreenshot"));
-//                }
-//                break;
-//            case browserConfig:
-//                idToRef(v1, "script");
-//                if (v1.containsKey("maxInactivityTimeMs")) {
-//                    v1.put("sleepAfterPageloadMs", v1.remove("maxInactivityTimeMs"));
-//                }
-//                break;
-//        }
-//        v1.remove("apiVersion");
-//        v1.remove("kind");
-//        return v1;
-//    }
-
-//    private static void idToRef(Map<String, Object> v1, String name) {
-//        if (v1.containsKey(name + "Ref")) {
-//            Object oldRef = v1.remove(name + "Ref");
-//            if (oldRef instanceof List) {
-//                List refs = r.array();
-//                for (Map item : (List<Map>) oldRef) {
-//                    refs.add(item.get("id"));
-//                }
-//                v1.put(name + "Id", refs);
-//            } else {
-//                v1.put(name + "Id", ((Map) oldRef).get("id"));
-//            }
-//        }
-//    }
-
-//    public <T extends Message> T saveMessage(T msg, Kind kind) throws DbException {
-//        final Tables table = getTableForKind(kind);
-//
-//        if (msg.getDescriptorForType().findFieldByName("meta") == null) {
-//            throw new IllegalArgumentException("Message must be a config message");
-//        }
-//        Map<String, Object> rMap = ProtoUtils.protoToRethink(msg);
-//
-//        rMap = convertOldToV1Api(kind, rMap);
-//
-//        // Check that name is set if this is a new object
-//        if (!rMap.containsKey("id") && (!rMap.containsKey("meta") || !((Map) rMap.get("meta")).containsKey("name"))) {
-//            throw new IllegalArgumentException("Trying to store a new " + msg.getClass().getSimpleName()
-//                    + " object, but meta.name is not set.");
-//        }
-//
-//        rMap.put("meta", updateMeta((Map) rMap.get("meta")));
-//
-//        Map<String, Object> response = executeInsertOrUpdate("db-save" + msg.getClass().getSimpleName(),
-//                r.table(table.name)
-//                        .insert(rMap)
-//                        // A rethink function which copies created and createby from old doc,
-//                        // and copies name if not existent in new doc
-//                        .optArg("conflict", (id, old_doc, new_doc) -> new_doc.merge(
-//                                r.hashMap("meta", r.hashMap()
-//                                        .with("name", r.branch(new_doc.g("meta").hasFields("name"),
-//                                                new_doc.g("meta").g("name"), old_doc.g("meta").g("name")))
-//                                        .with("created", old_doc.g("meta").g("created"))
-//                                        .with("createdBy", old_doc.g("meta").g("createdBy"))
-//                                )))
-//        );
-//
-//        response = convertV1ToOldApi(response);
-//
-//        return ProtoUtils.rethinkToProto(response, (Class<T>) msg.getClass());
-//    }
-
-//    private Map<String, Object> executeInsertOrUpdate(String operationName, ReqlExpr qry) throws DbException {
-//        if (qry instanceof Insert) {
-//            qry = ((Insert) qry).optArg("return_changes", "always");
-//        } else if (qry instanceof Update) {
-//            qry = ((Update) qry).optArg("return_changes", "always");
-//        }
-//
-//        Map<String, Object> response = conn.exec(operationName, qry);
-//        List<Map<String, Map>> changes = (List<Map<String, Map>>) response.get("changes");
-//
-//        Map newDoc = changes.get(0).get("new_val");
-//        return newDoc;
-//    }
 
     static Tables getTableForKind(Kind kind) {
         switch (kind) {
@@ -399,7 +231,8 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
         checkConfigRefKind(msg);
 
         FieldDescriptor metaField = msg.getDescriptorForType().findFieldByName("meta");
-        Map rMap = ProtoUtils.protoToRethink(msg);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> rMap = ProtoUtils.protoToRethink(msg);
 
         if (metaField == null) {
             throw new IllegalArgumentException("Missing meta");
@@ -429,6 +262,7 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private Map updateMeta(Map meta) {
         if (meta == null) {
             meta = r.hashMap();

@@ -17,13 +17,17 @@
 package no.nb.nna.veidemann.db;
 
 import com.rethinkdb.RethinkDB;
+import com.rethinkdb.gen.ast.Insert;
 import no.nb.nna.veidemann.api.commons.v1.ExtractedText;
+import no.nb.nna.veidemann.api.config.v1.CrawlScope;
 import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
 import no.nb.nna.veidemann.api.contentwriter.v1.RecordType;
 import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
+import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus.State;
+import no.nb.nna.veidemann.api.report.v1.CrawlExecutionsListRequest;
 import no.nb.nna.veidemann.api.report.v1.JobExecutionsListRequest;
 import no.nb.nna.veidemann.commons.db.ChangeFeed;
 import no.nb.nna.veidemann.commons.db.DbException;
@@ -35,13 +39,14 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class RethinkDbExecutionsAdapterIT {
-
     public static RethinkDbConnection conn;
     public static RethinkDbExecutionsAdapter executionsAdapter;
 
@@ -93,11 +98,130 @@ public class RethinkDbExecutionsAdapterIT {
         }
     }
 
+    private CrawlExecutionStatus createCrawlExecutionStatus(String jobId, String jobExecutionId, String seedId, CrawlScope scope) throws DbException {
+        Objects.requireNonNull(jobId, "jobId must be set");
+        Objects.requireNonNull(jobExecutionId, "jobExecutionId must be set");
+        Objects.requireNonNull(seedId, "seedId must be set");
+        Objects.requireNonNull(scope, "crawl scope must be set");
+
+        CrawlExecutionStatus status = CrawlExecutionStatus.newBuilder()
+                .setJobId(jobId)
+                .setJobExecutionId(jobExecutionId)
+                .setSeedId(seedId)
+                .setScope(scope)
+                .setState(CrawlExecutionStatus.State.CREATED)
+                .build();
+
+        Map rMap = ProtoUtils.protoToRethink(status);
+        rMap.put("lastChangeTime", r.now());
+        rMap.put("createdTime", r.now());
+
+        Insert qry = r.table(Tables.EXECUTIONS.name).insert(rMap);
+        return conn.executeInsert("db-createExecutionStatus", qry, CrawlExecutionStatus.class);
+    }
+
+    @Test
+    public void listCrawlExecutionStatus() throws DbException, InterruptedException {
+        CrawlExecutionStatus ces1 = createCrawlExecutionStatus("jobId1", "jobExe1", "seedId1", CrawlScope.getDefaultInstance());
+        CrawlExecutionStatus ces2 = createCrawlExecutionStatus("jobId1", "jobExe1", "seedId2", CrawlScope.getDefaultInstance());
+        CrawlExecutionStatus ces3 = createCrawlExecutionStatus("jobId1", "jobExe2", "seedId1", CrawlScope.getDefaultInstance());
+
+        // Check crawl executions list functions
+        CrawlExecutionsListRequest.Builder request = CrawlExecutionsListRequest.newBuilder();
+        ChangeFeed<CrawlExecutionStatus> eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(3)
+                .containsExactlyInAnyOrder(ces1, ces2, ces3);
+
+        request = CrawlExecutionsListRequest.newBuilder().addId(ces2.getId());
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(1)
+                .containsExactlyInAnyOrder(ces2);
+
+        request = CrawlExecutionsListRequest.newBuilder();
+        request.getQueryTemplateBuilder().setJobExecutionId("jobExe1");
+        request.getQueryMaskBuilder().addPaths("jobExecutionId");
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(2)
+                .containsExactlyInAnyOrder(ces1, ces2);
+
+        request = CrawlExecutionsListRequest.newBuilder();
+        request.getQueryTemplateBuilder().setSeedId("seedId1");
+        request.getQueryMaskBuilder().addPaths("seedId");
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(2)
+                .containsExactlyInAnyOrder(ces1, ces3);
+
+        request = CrawlExecutionsListRequest.newBuilder();
+        request.getQueryTemplateBuilder().setJobExecutionId("jobExe1").setSeedId("seedId1");
+        request.getQueryMaskBuilder().addPaths("jobExecutionId").addPaths("seedId");
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(1)
+                .containsExactlyInAnyOrder(ces1);
+
+        request = CrawlExecutionsListRequest.newBuilder();
+        request.addState(CrawlExecutionStatus.State.CREATED);
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(3)
+                .containsExactlyInAnyOrder(ces1, ces2, ces3);
+
+        // Test watch query
+        request = CrawlExecutionsListRequest.newBuilder().setWatch(true);
+        ChangeFeed<CrawlExecutionStatus> feed = executionsAdapter.listCrawlExecutionStatus(request.build());
+        new Thread(() -> {
+            try {
+                Thread.sleep(100);
+                String id = createCrawlExecutionStatus("jobId1", "jobExe2", "seedId3", CrawlScope.getDefaultInstance()).getId();
+                Thread.sleep(100);
+                executionsAdapter.setCrawlExecutionStateAborted(id);
+                Thread.sleep(100);
+                feed.stream().close();
+            } catch (InterruptedException | DbException e) {
+                e.printStackTrace();
+            }
+        }).start();
+        assertThat(feed.stream())
+                .hasSize(2)
+                .allMatch(e -> e.getSeedId().equals("seedId3"));
+    }
+
     @Test
     public void listJobExecutionStatus() throws DbException {
         JobExecutionStatus jes1 = executionsAdapter.createJobExecutionStatus("jobId1");
+        jes1 = jes1.toBuilder()
+                .putExecutionsState("UNDEFINED", 0)
+                .putExecutionsState("CREATED", 0)
+                .putExecutionsState("FETCHING", 0)
+                .putExecutionsState("SLEEPING", 0)
+                .putExecutionsState("FINISHED", 0)
+                .putExecutionsState("ABORTED_TIMEOUT", 0)
+                .putExecutionsState("ABORTED_SIZE", 0)
+                .putExecutionsState("ABORTED_MANUAL", 0)
+                .putExecutionsState("FAILED", 0)
+                .putExecutionsState("DIED", 0)
+                .putExecutionsState("UNRECOGNIZED", 0)
+                .build();
+
         JobExecutionStatus jes2 = executionsAdapter.createJobExecutionStatus("jobId1");
         jes2 = executionsAdapter.setJobExecutionStateAborted(jes2.getId());
+        jes2 = jes2.toBuilder()
+                .putExecutionsState("UNDEFINED", 0)
+                .putExecutionsState("CREATED", 0)
+                .putExecutionsState("FETCHING", 0)
+                .putExecutionsState("SLEEPING", 0)
+                .putExecutionsState("FINISHED", 0)
+                .putExecutionsState("ABORTED_TIMEOUT", 0)
+                .putExecutionsState("ABORTED_SIZE", 0)
+                .putExecutionsState("ABORTED_MANUAL", 0)
+                .putExecutionsState("FAILED", 0)
+                .putExecutionsState("DIED", 0)
+                .putExecutionsState("UNRECOGNIZED", 0)
+                .build();
 
         // Check job executions list functions
         ChangeFeed<JobExecutionStatus> jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.getDefaultInstance());
@@ -105,9 +229,6 @@ public class RethinkDbExecutionsAdapterIT {
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addId(jes2.getId()).build());
         assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes2);
-
-        System.out.println(executionsAdapter.getJobExecutionStatus(jes1.getId()).getState());
-        System.out.println(executionsAdapter.getJobExecutionStatus(jes2.getId()).getState());
 
         JobExecutionsListRequest.Builder req = JobExecutionsListRequest.newBuilder();
         req.getQueryTemplateBuilder().setState(State.RUNNING);
