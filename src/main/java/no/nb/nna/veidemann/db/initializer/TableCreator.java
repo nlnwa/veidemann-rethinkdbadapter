@@ -67,6 +67,12 @@ public class TableCreator {
         conn.exec(r.tableDrop(table.name));
     }
 
+    void deleteTable(String tableName) throws DbQueryException, DbConnectionException {
+        if (!tableExists(tableName)) return;
+        LOG.info("Deleting table {}", tableName);
+        conn.exec(r.tableDrop(tableName));
+    }
+
     void createIndex(Tables table, String indexName) throws DbQueryException, DbConnectionException {
         createIndex(table, indexName, false);
     }
@@ -100,6 +106,10 @@ public class TableCreator {
 
     boolean tableExists(Tables table) throws DbQueryException, DbConnectionException {
         return conn.exec(r.tableList().contains(table.name));
+    }
+
+    boolean tableExists(String tableName) throws DbQueryException, DbConnectionException {
+        return conn.exec(r.tableList().contains(tableName));
     }
 
     boolean indexExists(Tables table, String indexName) throws DbQueryException, DbConnectionException {

@@ -100,8 +100,8 @@ public class CreateDbV0_1 implements Runnable {
 
         conn.exec(r.tableCreate("config_crawl_host_group_configs"));
 
-        conn.exec(r.tableCreate(Tables.CRAWL_HOST_GROUP.name));
-        conn.exec(r.table(Tables.CRAWL_HOST_GROUP.name).indexCreate("nextFetchTime"));
+        conn.exec(r.tableCreate("crawl_host_group"));
+        conn.exec(r.table("crawl_host_group").indexCreate("nextFetchTime"));
 
         conn.exec(r.tableCreate("already_crawled_cache")
                 .optArg("durability", "soft")
@@ -127,7 +127,7 @@ public class CreateDbV0_1 implements Runnable {
         conn.exec(r.table(Tables.CRAWL_LOG.name).indexWait("surt_time", "executionId"));
         conn.exec(r.table(Tables.PAGE_LOG.name).indexWait("executionId"));
         conn.exec(r.table(Tables.SEEDS.name).indexWait("jobId", "entityId"));
-        conn.exec(r.table(Tables.CRAWL_HOST_GROUP.name).indexWait("nextFetchTime"));
+        conn.exec(r.table("crawl_host_group").indexWait("nextFetchTime"));
         conn.exec(r.table(Tables.EXECUTIONS.name).indexWait("startTime"));
     }
 

@@ -40,22 +40,38 @@ public class ChangeFeedBaseTest {
         when(cursorMock.hasNext())
                 .thenReturn(true)
                 .thenReturn(true)
+                .thenReturn(true)
+                .thenReturn(true)
                 .thenReturn(false);
         when(cursorMock.next(anyLong()))
                 .thenReturn(r.hashMap("id", "id1"))
-                .thenReturn(r.hashMap("id", "id2").with("seed", r.hashMap("disabled", "100")));
+                .thenReturn(r.hashMap("id", "id2").with("seed", r.hashMap("disabled", true)))
+                // Error expected since boolean field disabled cannot contain a number
+                .thenReturn(r.hashMap("id", "id3").with("seed", r.hashMap("disabled", "100")))
+                .thenReturn(r.hashMap("id", "id4").with("seed", r.hashMap("disabled", false)));
 
         ChangeFeed<ConfigObject> cf = new ChangeFeedBase<ConfigObject>(cursorMock) {
             @Override
             protected Function<Map<String, Object>, ConfigObject> mapper() {
                 return co -> {
-                    ConfigObject res = ProtoUtils.rethinkToProto(co, ConfigObject.class);
-                    return res;
+                    try {
+                        ConfigObject res = ProtoUtils.rethinkToProto(co, ConfigObject.class);
+                        return res;
+                    } catch (Exception e) {
+                        // Expecting conversion of 'id3' to fail
+                        assertThat(co.get("id")).isEqualTo("id3");
+                        return null;
+                    }
                 };
             }
         };
 
-        // Expecting only one beacause one should fail
-        assertThat(cf.stream()).hasSize(1);
+        // Expecting only three because 'id3' should fail
+        assertThat(cf.stream()).hasSize(3).extracting("id")
+                .satisfies(objects -> {
+                    assertThat(objects.get(0)).isEqualTo("id1");
+                    assertThat(objects.get(1)).isEqualTo("id2");
+                    assertThat(objects.get(2)).isEqualTo("id4");
+                });
     }
 }

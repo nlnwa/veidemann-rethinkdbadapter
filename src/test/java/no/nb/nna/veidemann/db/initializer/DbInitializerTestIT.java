@@ -126,7 +126,7 @@ public class DbInitializerTestIT {
 
         List<String> tables = conn.exec(r.tableList());
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name, Tables.SEEDS.name,
-                Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
+                Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
                 Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
                 Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
@@ -138,7 +138,7 @@ public class DbInitializerTestIT {
 
         tables = conn.exec(r.tableList());
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name,
-                Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
+                Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
                 Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
                 Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
@@ -149,7 +149,7 @@ public class DbInitializerTestIT {
 
         tables = conn.exec(r.tableList());
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name, Tables.SEEDS.name,
-                Tables.CRAWL_HOST_GROUP.name, Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
+                Tables.CRAWL_LOG.name, Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name,
                 Tables.EXTRACTED_TEXT.name, Tables.JOB_EXECUTIONS.name, Tables.LOCKS.name, Tables.PAGE_LOG.name,
                 Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 

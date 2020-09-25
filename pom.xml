@@ -17,7 +17,8 @@
         <initializer.image.name>veidemann-db-initializer</initializer.image.name>
         <log4j.version>2.13.3</log4j.version>
 
-        <veidemann-commons-version>0.4.5</veidemann-commons-version>
+        <veidemann.api.version>1.0.0-beta18</veidemann.api.version>
+        <veidemann.commons.version>0.4.7</veidemann.commons.version>
 
         <!--Docker container versions forintegration tests-->
         <rethinkdb.version>2.4.1</rethinkdb.version>
@@ -44,8 +45,13 @@
     <dependencies>
         <dependency>
             <groupId>com.github.nlnwa</groupId>
+            <artifactId>veidemann-api</artifactId>
+            <version>${veidemann.api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.nlnwa</groupId>
             <artifactId>veidemann-commons</artifactId>
-            <version>${veidemann-commons-version}</version>
+            <version>${veidemann.commons.version}</version>
         </dependency>
         <dependency>
             <groupId>com.rethinkdb</groupId>
@@ -66,18 +72,6 @@
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
             <version>1.23</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.redisson</groupId>
-            <artifactId>redisson</artifactId>
-            <version>3.11.6</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>de.ruedigermoeller</groupId>
-                    <artifactId>fst</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <!-- Do all logging thru Log4j -->

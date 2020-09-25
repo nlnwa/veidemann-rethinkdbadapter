@@ -28,14 +28,11 @@ import com.rethinkdb.gen.exc.ReqlOpFailedError;
 import com.rethinkdb.model.OptArgs;
 import com.rethinkdb.net.Connection;
 import no.nb.nna.veidemann.commons.db.ConfigAdapter;
-import no.nb.nna.veidemann.commons.db.CrawlQueueAdapter;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbInitializer;
 import no.nb.nna.veidemann.commons.db.DbQueryException;
 import no.nb.nna.veidemann.commons.db.DbServiceSPI;
-import no.nb.nna.veidemann.commons.db.DistributedLock;
-import no.nb.nna.veidemann.commons.db.DistributedLock.Key;
 import no.nb.nna.veidemann.commons.db.EventAdapter;
 import no.nb.nna.veidemann.commons.db.ExecutionsAdapter;
 import no.nb.nna.veidemann.commons.settings.CommonSettings;
@@ -61,15 +58,11 @@ public class RethinkDbConnection implements DbServiceSPI {
 
     private RethinkDbConfigAdapter configAdapter;
 
-    private RethinkDbCrawlQueueAdapter queueAdapter;
-
     private RethinkDbExecutionsAdapter executionsAdapter;
 
     private RethinkDbEventAdapter eventAdapter;
 
     private RethinkDbInitializer dbInitializer;
-
-    private boolean useRedisLock = false;
 
     public <T> T exec(ReqlAst qry) throws DbConnectionException, DbQueryException {
         return exec("db-query", qry);
@@ -98,6 +91,7 @@ public class RethinkDbConnection implements DbServiceSPI {
 
         while (true) {
             try {
+                @SuppressWarnings("unchecked")
                 T result = qry.run(conn, globalOpts);
                 if (result instanceof Map
                         && ((Map) result).containsKey("errors")
@@ -151,6 +145,7 @@ public class RethinkDbConnection implements DbServiceSPI {
         }
 
         Map<String, Object> response = exec(operationName, qry);
+        @SuppressWarnings("unchecked")
         List<Map<String, Map>> changes = (List<Map<String, Map>>) response.get("changes");
 
         Map newDoc = changes.get(0).get("new_val");
@@ -182,11 +177,6 @@ public class RethinkDbConnection implements DbServiceSPI {
     }
 
     @Override
-    public CrawlQueueAdapter getCrawlQueueAdapter() {
-        return queueAdapter;
-    }
-
-    @Override
     public ExecutionsAdapter getExecutionsAdapter() {
         return executionsAdapter;
     }
@@ -202,37 +192,14 @@ public class RethinkDbConnection implements DbServiceSPI {
     }
 
     @Override
-    public DistributedLock createDistributedLock(Key key, int expireSeconds) {
-        if (useRedisLock) {
-            return new RedisDistributedLock(this, key);
-        } else {
-            return new RethinkDbDistributedLock(this, key, expireSeconds);
-        }
-    }
-
-    @Override
-    public List<Key> listExpiredDistributedLocks(String domain) throws DbQueryException, DbConnectionException {
-        return RethinkDbDistributedLock.listExpiredDistributedLocks(this, domain);
-    }
-
-    @Override
-    public List<Key> listExpiredDistributedLocks() throws DbQueryException, DbConnectionException {
-        return RethinkDbDistributedLock.listExpiredDistributedLocks(this);
-    }
-
-    @Override
     public void connect(CommonSettings settings) throws DbConnectionException {
         conn = connect(settings.getDbHost(), settings.getDbPort(), settings.getDbName(), settings.getDbUser(),
                 settings.getDbPassword(), 30);
 
         configAdapter = new RethinkDbConfigAdapter(this);
-        queueAdapter = new RethinkDbCrawlQueueAdapter(this);
         executionsAdapter = new RethinkDbExecutionsAdapter(this);
         eventAdapter = new RethinkDbEventAdapter(this);
         dbInitializer = new RethinkDbInitializer(this);
-        if (Integer.parseInt(System.getProperty("lock.redis.port", "0")) > 0) {
-            useRedisLock = true;
-        }
     }
 
     private Connection connect(String dbHost, int dbPort, String dbName, String dbUser, String dbPassword,
