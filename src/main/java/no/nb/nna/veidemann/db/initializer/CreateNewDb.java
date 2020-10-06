@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 public class CreateNewDb extends TableCreator implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CreateNewDb.class);
 
-    public static final String DB_VERSION = "1.9";
+    public static final String DB_VERSION = "1.10";
 
     public CreateNewDb(String dbName, RethinkDbConnection conn) {
         super(dbName, conn);

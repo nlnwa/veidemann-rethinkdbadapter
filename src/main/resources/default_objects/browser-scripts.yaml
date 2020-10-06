@@ -32,8 +32,6 @@ meta:
   label:
     - key: scope
       value: default
-    - key: type
-      value: extract_outlinks
   name: extract-outlinks.js
 
 ---
@@ -43,9 +41,12 @@ id: 75dfe01a-e9cc-4fd2-8aa5-c04878d9f1a1
 browserScript:
   browserScriptType: ON_LOAD
   script: |
-    function scroll ({ count = 100 } = {}) {
-      // first iteration of this scripts use a string representation of argument
-      const c = parseInt(count, 10)
+    function scroll ({ next, count = 100 } = {}) {
+      let c = count;
+      if (typeof count === 'string') {
+        // if count originates from annotation it is string
+        c = parseInt(count, 10)
+      }
 
       // height of visible area of window
       const windowHeight = window.innerHeight
@@ -53,34 +54,35 @@ browserScript:
       // height of scrollable area
       const scrollHeight = document.documentElement.scrollHeight
 
-      if (c > 0 && scrollHeight > window.pageYOffset + windowHeight) {
-        // scroll down height of window
-        window.scrollBy(0, windowHeight)
+      // scroll down height of window
+      window.scrollBy(0, windowHeight)
 
-        if (c - 1 > 0 && scrollHeight > window.pageYOffset + windowHeight) {
-          return {
-            waitForData: true,
-            next: 'self',
-            data: {
-              count: c - 1,
-            }
+      if (c - 1 > 0 && scrollHeight > window.pageYOffset + windowHeight) {
+        return {
+          waitForData: true,
+          next: 'self',
+          data: {
+            count: c - 1,
           }
         }
       }
 
       return {
-        waitForData: false,
-        next: 'scrollTo.js',
-        data: { x: 0, y: 0 }
+        next,
+        waitForData: true
       }
     }
+
   urlRegexp: []
 kind: browserScript
 meta:
-  description: Scroll down maxPages
+  description: Scroll down count pages
   label:
     - key: scope
       value: default
+  annotation:
+    - key: next
+      value: 0ef72ea7-f145-4908-adaa-ebf50890b09c
   name: scroll.js
 
 ---
@@ -90,13 +92,8 @@ id: 0ef72ea7-f145-4908-adaa-ebf50890b09c
 browserScript:
   browserScriptType: UNDEFINED
   script: |
-    function scrollTo({x = 0, y = 0} = {}) {
-      window.scrollTo(x, y);
-      return {
-        waitForData: true,
-        next: '',
-        data: null,
-      };
+    function scrollTo({ x = 0, y = 0 } = {}) {
+      window.scrollTo(x, y)
     }
   urlRegexp: []
 kind: browserScript
