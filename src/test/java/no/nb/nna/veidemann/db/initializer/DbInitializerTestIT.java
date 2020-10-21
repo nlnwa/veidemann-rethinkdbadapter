@@ -93,7 +93,7 @@ public class DbInitializerTestIT {
         assertThat(o.get("crawlScheduleConfig")).isEqualTo(3L);
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name))) {
-            assertThat(configObjects.iterator())
+            assertThat(configObjects.iterator()).toIterable()
                     .hasSize(15)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
@@ -106,7 +106,7 @@ public class DbInitializerTestIT {
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
                 .filter(r.hashMap("kind", "browserConfig")))) {
-            assertThat(configObjects.iterator())
+            assertThat(configObjects.iterator()).toIterable()
                     .hasSize(1)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
@@ -183,7 +183,7 @@ public class DbInitializerTestIT {
         assertThat(o.get("crawlScheduleConfig")).isEqualTo(3L);
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name))) {
-            assertThat(configObjects.iterator())
+            assertThat(configObjects.iterator()).toIterable()
                     .hasSize(15)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
@@ -195,7 +195,7 @@ public class DbInitializerTestIT {
         }
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.SEEDS.name))) {
-            assertThat(configObjects.iterator())
+            assertThat(configObjects.iterator()).toIterable()
                     .hasSize(5)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
@@ -212,7 +212,7 @@ public class DbInitializerTestIT {
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.SEEDS.name)
                 .getAll(r.array(Kind.crawlEntity.name(), "d816019f-103e-44b8-aa3b-93cd727104c6"))
                 .optArg("index", "configRefs"))) {
-            assertThat(configObjects.iterator())
+            assertThat(configObjects.iterator()).toIterable()
                     .hasSize(2)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
@@ -228,7 +228,7 @@ public class DbInitializerTestIT {
         }
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CRAWL_ENTITIES.name))) {
-            assertThat(configObjects.iterator())
+            assertThat(configObjects.iterator()).toIterable()
                     .hasSize(4)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
@@ -241,7 +241,7 @@ public class DbInitializerTestIT {
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
                 .filter(r.hashMap("kind", "browserConfig")))) {
-            assertThat(configObjects.iterator())
+            assertThat(configObjects.iterator()).toIterable()
                     .hasSize(1)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
@@ -253,7 +253,7 @@ public class DbInitializerTestIT {
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
                 .filter(r.hashMap("kind", "crawlConfig")))) {
-            assertThat(configObjects.iterator())
+            assertThat(configObjects.iterator()).toIterable()
                     .hasSize(1)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
@@ -267,7 +267,7 @@ public class DbInitializerTestIT {
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
                 .getAll(r.array(Kind.crawlConfig.name(), "f8609d3f-9bf2-416c-ad50-7774b7d2dd95"))
                 .optArg("index", "configRefs"))) {
-            assertThat(configObjects.iterator())
+            assertThat(configObjects.iterator()).toIterable()
                     .hasSize(4)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
@@ -283,7 +283,7 @@ public class DbInitializerTestIT {
                         r.array(Kind.crawlConfig.name(), "f8609d3f-9bf2-416c-ad50-7774b7d2dd95"),
                         r.array(Kind.crawlScheduleConfig.name(), "5604f0cc-315d-4091-8d6e-1b17a7eb990b"))))
                 .optArg("index", "configRefs"))) {
-            assertThat(configObjects.iterator())
+            assertThat(configObjects.iterator()).toIterable()
                     .hasSize(5)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
@@ -297,7 +297,7 @@ public class DbInitializerTestIT {
         }
 
         try (Cursor<Map> crawledContent = conn.exec(r.table(Tables.CRAWLED_CONTENT.name))) {
-            assertThat(crawledContent.iterator())
+            assertThat(crawledContent.iterator()).toIterable()
                     .hasSize(11)
                     .allSatisfy(r -> {
                         CrawledContent cc = ProtoUtils.rethinkToProto(r, CrawledContent.class);

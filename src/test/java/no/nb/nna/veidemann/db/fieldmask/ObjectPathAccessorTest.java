@@ -20,8 +20,11 @@ import no.nb.nna.veidemann.api.commons.v1.FieldMask;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject;
 import no.nb.nna.veidemann.api.config.v1.ConfigObjectOrBuilder;
 import no.nb.nna.veidemann.api.config.v1.Kind;
+import org.assertj.core.api.InstanceOfAssertFactories;
+import org.assertj.core.api.InstanceOfAssertFactory;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -87,14 +90,14 @@ public class ObjectPathAccessorTest {
                 .hasFieldOrPropertyWithValue("apiVersion", "v1")
                 .hasFieldOrPropertyWithValue("kind", Kind.browserConfig)
                 .hasFieldOrPropertyWithValue("meta.name", "foo")
-                .extracting(c -> ((ConfigObjectOrBuilder) c).hasBrowserConfig()).containsExactly(false);
+                .extracting(c -> ((ConfigObjectOrBuilder) c).hasBrowserConfig(), as(InstanceOfAssertFactories.BOOLEAN)).isFalse();
 
         o = fmd.setValue("meta.name", co.build(), "foo");
         assertThat(o).isExactlyInstanceOf(ConfigObject.class)
                 .hasFieldOrPropertyWithValue("apiVersion", "v1")
                 .hasFieldOrPropertyWithValue("kind", Kind.browserConfig)
                 .hasFieldOrPropertyWithValue("meta.name", "foo")
-                .extracting(c -> ((ConfigObjectOrBuilder) c).hasBrowserConfig()).containsExactly(false);
+                .extracting(c -> ((ConfigObjectOrBuilder) c).hasBrowserConfig(), as(InstanceOfAssertFactories.BOOLEAN)).isFalse();
 
         ConfigObjectOrBuilder cob = (ConfigObjectOrBuilder) o;
 
@@ -104,7 +107,7 @@ public class ObjectPathAccessorTest {
                 .hasFieldOrPropertyWithValue("kind", Kind.browserConfig)
                 .hasFieldOrPropertyWithValue("meta.name", "foo")
                 .hasFieldOrPropertyWithValue("browserConfig.userAgent", "agent")
-                .extracting(c -> ((ConfigObjectOrBuilder) c).hasBrowserConfig()).containsExactly(true);
+                .extracting(c -> ((ConfigObjectOrBuilder) c).hasBrowserConfig(), as(InstanceOfAssertFactories.BOOLEAN)).isTrue();
 
         cob = fmd.setValue("browserConfig.windowWidth", cob, 100);
         assertThat(cob).isExactlyInstanceOf(ConfigObject.class)
@@ -113,7 +116,7 @@ public class ObjectPathAccessorTest {
                 .hasFieldOrPropertyWithValue("meta.name", "foo")
                 .hasFieldOrPropertyWithValue("browserConfig.userAgent", "agent")
                 .hasFieldOrPropertyWithValue("browserConfig.windowWidth", 100)
-                .extracting(c -> ((ConfigObjectOrBuilder) c).hasBrowserConfig()).containsExactly(true);
+                .extracting(c -> ((ConfigObjectOrBuilder) c).hasBrowserConfig(), as(InstanceOfAssertFactories.BOOLEAN)).isTrue();
 
         cob = fmd.setValue("browserConfig.windowWidth", cob, 100);
         assertThat(cob).isExactlyInstanceOf(ConfigObject.class)
@@ -122,7 +125,7 @@ public class ObjectPathAccessorTest {
                 .hasFieldOrPropertyWithValue("meta.name", "foo")
                 .hasFieldOrPropertyWithValue("browserConfig.userAgent", "agent")
                 .hasFieldOrPropertyWithValue("browserConfig.windowWidth", 100)
-                .extracting(c -> ((ConfigObjectOrBuilder) c).hasBrowserConfig()).containsExactly(true);
+                .extracting(c -> ((ConfigObjectOrBuilder) c).hasBrowserConfig(), as(InstanceOfAssertFactories.BOOLEAN)).isTrue();
     }
 
 }
