@@ -179,13 +179,34 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
 
         res.iterator().forEachRemaining(e -> {
             try {
-                setCrawlExecutionStateAborted(e.get("id"));
+                setCrawlExecutionStateAborted(e.get("id"), CrawlExecutionStatus.State.ABORTED_MANUAL);
             } catch (DbException ex) {
                 LOG.error("Error while aborting Crawl Execution", ex);
             }
         });
 
         return result;
+    }
+
+    @Override
+    public void setJobExecutionStateAbortedTimeout(String jobExecutionId) throws DbException {
+        // Set all Crawl Executions which are part of this Job Execution to aborted
+        Cursor<Map<String, String>> res = conn.exec("db-setJobExecutionStateAborted",
+                r.table(Tables.EXECUTIONS.name)
+                        .between(
+                                r.array(jobExecutionId, r.minval()),
+                                r.array(jobExecutionId, r.maxval()))
+                        .optArg("index", "jobExecutionId_seedId")
+                        .pluck("id")
+        );
+
+        res.iterator().forEachRemaining(e -> {
+            try {
+                setCrawlExecutionStateAborted(e.get("id"), CrawlExecutionStatus.State.ABORTED_TIMEOUT);
+            } catch (DbException ex) {
+                LOG.error("Error while setting ABORTED_TIMEOUT for Crawl Execution {}", e.get("id"), ex);
+            }
+        });
     }
 
     @Override
@@ -225,17 +246,26 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     }
 
     @Override
-    public CrawlExecutionStatus setCrawlExecutionStateAborted(String crawlExecutionId) throws DbException {
-        return conn.executeUpdate("db-setExecutionStateAborted",
-                r.table(Tables.EXECUTIONS.name)
-                        .get(crawlExecutionId)
-                        .update(
-                                doc -> r.branch(
-                                        doc.hasFields("endTime"),
-                                        r.hashMap(),
-                                        r.hashMap("state", CrawlExecutionStatus.State.ABORTED_MANUAL.name()))
-                        ),
-                CrawlExecutionStatus.class);
+    public CrawlExecutionStatus setCrawlExecutionStateAborted(String crawlExecutionId, CrawlExecutionStatus.State state)
+            throws DbException {
+        switch (state) {
+            case ABORTED_SIZE:
+            case ABORTED_TIMEOUT:
+            case ABORTED_MANUAL:
+                return conn.executeUpdate("db-setExecutionStateAborted",
+                        r.table(Tables.EXECUTIONS.name)
+                                .get(crawlExecutionId)
+                                .update(
+                                        doc -> r.branch(
+                                                doc.hasFields("endTime"),
+                                                r.hashMap(),
+                                                r.hashMap("state", state.name()))
+                                ),
+                        CrawlExecutionStatus.class);
+            default:
+                throw new IllegalArgumentException(
+                        "State must be one of ABORTED_SIZE, ABORTED_TIMEOUT, ABORTED_MANUAL, but was: " + state);
+        }
     }
 
     @Override

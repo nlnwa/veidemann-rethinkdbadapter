@@ -178,7 +178,7 @@ public class RethinkDbExecutionsAdapterIT {
                 Thread.sleep(100);
                 String id = createCrawlExecutionStatus("jobId1", "jobExe2", "seedId3", CrawlScope.getDefaultInstance()).getId();
                 Thread.sleep(100);
-                executionsAdapter.setCrawlExecutionStateAborted(id);
+                executionsAdapter.setCrawlExecutionStateAborted(id, CrawlExecutionStatus.State.ABORTED_MANUAL);
                 Thread.sleep(100);
                 feed.stream().close();
             } catch (InterruptedException | DbException e) {
