@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 public class CreateNewDb extends TableCreator implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CreateNewDb.class);
 
-    public static final String DB_VERSION = "1.10";
+    public static final String DB_VERSION = "1.11";
 
     public CreateNewDb(String dbName, RethinkDbConnection conn) {
         super(dbName, conn);
@@ -102,7 +102,6 @@ public class CreateNewDb extends TableCreator implements Runnable {
     private void createCrawlLogTable() throws DbQueryException, DbConnectionException {
         createTable(Tables.CRAWL_LOG, "warcId");
         createIndex(Tables.CRAWL_LOG, "executionId");
-        createIndex(Tables.CRAWL_LOG, "surt_time", row -> r.array(row.g("surt"), row.g("timeStamp")));
     }
 
     private void createPageLogTable() throws DbQueryException, DbConnectionException {
