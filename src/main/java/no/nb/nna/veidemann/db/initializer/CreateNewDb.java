@@ -52,7 +52,6 @@ public class CreateNewDb extends TableCreator implements Runnable {
     private final void createTables() throws DbQueryException, DbConnectionException {
         createSystemTable();
         createConfigsTable();
-        createLocksTable();
         createCrawlLogTable();
         createPageLogTable();
         createCrawledContentTable();
@@ -93,10 +92,6 @@ public class CreateNewDb extends TableCreator implements Runnable {
                         .add(configRefSingular(row, Kind.crawlConfig.name(), "politenessRef"))
         );
         createMetaIndexes(Tables.CONFIG);
-    }
-
-    private void createLocksTable() throws DbQueryException, DbConnectionException {
-        createTable(Tables.LOCKS);
     }
 
     private void createCrawlLogTable() throws DbQueryException, DbConnectionException {

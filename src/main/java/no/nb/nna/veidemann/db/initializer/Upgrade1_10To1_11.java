@@ -28,6 +28,8 @@ public class Upgrade1_10To1_11 extends UpgradeDbBase {
 
     final void upgrade() throws DbQueryException, DbConnectionException {
         deleteIndex(Tables.CRAWL_LOG, "surt_time");
+
+        deleteTable("locks");
     }
 
     @Override

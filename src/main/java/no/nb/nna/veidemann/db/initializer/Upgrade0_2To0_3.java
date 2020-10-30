@@ -26,7 +26,7 @@ public class Upgrade0_2To0_3 extends UpgradeDbBase {
     }
 
     final void upgrade() throws DbQueryException, DbConnectionException {
-        conn.exec(r.tableCreate(Tables.LOCKS.name));
+        conn.exec(r.tableCreate("locks"));
     }
 
     @Override
