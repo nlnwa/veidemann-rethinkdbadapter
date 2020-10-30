@@ -30,6 +30,7 @@ public class Upgrade1_10To1_11 extends UpgradeDbBase {
         deleteIndex(Tables.CRAWL_LOG, "surt_time");
 
         deleteTable("locks");
+        deleteTable("extracted_text");
     }
 
     @Override

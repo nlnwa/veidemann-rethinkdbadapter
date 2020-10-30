@@ -56,7 +56,6 @@ public class CreateNewDb extends TableCreator implements Runnable {
         createPageLogTable();
         createCrawledContentTable();
         createStorageRefTable();
-        createExtractedTextTable();
         createUriQueueTable();
         createCrawlExecutionsTable();
         createJobExecutionsTable();
@@ -110,10 +109,6 @@ public class CreateNewDb extends TableCreator implements Runnable {
 
     private void createStorageRefTable() throws DbQueryException, DbConnectionException {
         createTable(Tables.STORAGE_REF, "warcId");
-    }
-
-    private void createExtractedTextTable() throws DbQueryException, DbConnectionException {
-        createTable(Tables.EXTRACTED_TEXT, "warcId");
     }
 
     private void createUriQueueTable() throws DbQueryException, DbConnectionException {
