@@ -1,10 +1,8 @@
-apiVersion: skaffold/v2beta5
+apiVersion: skaffold/v2beta9
 kind: Config
 metadata:
   name: veidemann-db-initializer
 build:
-  local:
-    push: false
   artifacts:
     - image: norsknettarkiv/veidemann-db-initializer
       jib: {}

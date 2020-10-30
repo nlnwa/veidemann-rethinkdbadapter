@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 public class CreateNewDb extends TableCreator implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CreateNewDb.class);
 
-    public static final String DB_VERSION = "1.10";
+    public static final String DB_VERSION = "1.11";
 
     public CreateNewDb(String dbName, RethinkDbConnection conn) {
         super(dbName, conn);
@@ -52,12 +52,10 @@ public class CreateNewDb extends TableCreator implements Runnable {
     private final void createTables() throws DbQueryException, DbConnectionException {
         createSystemTable();
         createConfigsTable();
-        createLocksTable();
         createCrawlLogTable();
         createPageLogTable();
         createCrawledContentTable();
         createStorageRefTable();
-        createExtractedTextTable();
         createUriQueueTable();
         createCrawlExecutionsTable();
         createJobExecutionsTable();
@@ -95,14 +93,9 @@ public class CreateNewDb extends TableCreator implements Runnable {
         createMetaIndexes(Tables.CONFIG);
     }
 
-    private void createLocksTable() throws DbQueryException, DbConnectionException {
-        createTable(Tables.LOCKS);
-    }
-
     private void createCrawlLogTable() throws DbQueryException, DbConnectionException {
         createTable(Tables.CRAWL_LOG, "warcId");
         createIndex(Tables.CRAWL_LOG, "executionId");
-        createIndex(Tables.CRAWL_LOG, "surt_time", row -> r.array(row.g("surt"), row.g("timeStamp")));
     }
 
     private void createPageLogTable() throws DbQueryException, DbConnectionException {
@@ -116,10 +109,6 @@ public class CreateNewDb extends TableCreator implements Runnable {
 
     private void createStorageRefTable() throws DbQueryException, DbConnectionException {
         createTable(Tables.STORAGE_REF, "warcId");
-    }
-
-    private void createExtractedTextTable() throws DbQueryException, DbConnectionException {
-        createTable(Tables.EXTRACTED_TEXT, "warcId");
     }
 
     private void createUriQueueTable() throws DbQueryException, DbConnectionException {

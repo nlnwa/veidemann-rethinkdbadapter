@@ -315,32 +315,6 @@ public class RethinkDbExecutionsAdapterIT {
     }
 
     /**
-     * Test of addExtractedText method, of class RethinkDbAdapter.
-     */
-    @Test
-    public void testAddExtractedText() throws DbException {
-        ExtractedText et1 = ExtractedText.newBuilder()
-                .setWarcId("testAddExtractedText")
-                .setText("text")
-                .build();
-
-        ExtractedText result1 = executionsAdapter.addExtractedText(et1);
-        assertThat(result1).isEqualTo(et1);
-
-        assertThatThrownBy(() -> executionsAdapter.addExtractedText(et1))
-                .isInstanceOf(DbException.class)
-                .hasMessageContaining("Duplicate primary key");
-
-        ExtractedText et2 = ExtractedText.newBuilder()
-                .setText("text")
-                .build();
-
-        assertThatThrownBy(() -> executionsAdapter.addExtractedText(et2))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("The required field 'warc_id' is missing from: 'ExtractedText");
-    }
-
-    /**
      * Test of addCrawlLog method, of class RethinkDbAdapter.
      */
     @Test

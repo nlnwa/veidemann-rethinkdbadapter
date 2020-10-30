@@ -1,11 +1,11 @@
 /*
- * Copyright 2018 National Library of Norway.
+ * Copyright 2019 National Library of Norway.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,22 +20,26 @@ import no.nb.nna.veidemann.commons.db.DbQueryException;
 import no.nb.nna.veidemann.db.RethinkDbConnection;
 import no.nb.nna.veidemann.db.Tables;
 
-public class Upgrade0_2To0_3 extends UpgradeDbBase {
-    public Upgrade0_2To0_3(String dbName, RethinkDbConnection conn) {
+
+public class Upgrade1_10To1_11 extends UpgradeDbBase {
+    public Upgrade1_10To1_11(String dbName, RethinkDbConnection conn) {
         super(dbName, conn);
     }
 
     final void upgrade() throws DbQueryException, DbConnectionException {
-        conn.exec(r.tableCreate("locks"));
+        deleteIndex(Tables.CRAWL_LOG, "surt_time");
+
+        deleteTable("locks");
+        deleteTable("extracted_text");
     }
 
     @Override
     String fromVersion() {
-        return "0.2";
+        return "1.10";
     }
 
     @Override
     String toVersion() {
-        return "0.3";
+        return "1.11";
     }
 }
