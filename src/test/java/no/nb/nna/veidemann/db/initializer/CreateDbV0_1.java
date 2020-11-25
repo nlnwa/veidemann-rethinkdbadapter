@@ -66,7 +66,7 @@ public class CreateDbV0_1 implements Runnable {
 
         conn.exec(r.tableCreate(Tables.CRAWLED_CONTENT.name).optArg("primary_key", "digest"));
 
-        conn.exec(r.tableCreate(Tables.EXTRACTED_TEXT.name).optArg("primary_key", "warcId"));
+        conn.exec(r.tableCreate("extracted_text").optArg("primary_key", "warcId"));
 
         conn.exec(r.tableCreate("config_browser_scripts"));
 

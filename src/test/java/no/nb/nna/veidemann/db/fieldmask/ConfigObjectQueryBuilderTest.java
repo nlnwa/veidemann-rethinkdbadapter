@@ -34,7 +34,7 @@ public class ConfigObjectQueryBuilderTest {
     public void getSortIndexForPath() {
         FieldMask m = FieldMask.newBuilder()
                 .addPaths("meta.name")
-                .addPaths("crawlConfig.extra.extractText")
+                .addPaths("crawlConfig.extra.createScreenshot")
                 .addPaths("meta")
                 .addPaths("crawlConfig.priorityWeight")
                 .build();
@@ -48,7 +48,7 @@ public class ConfigObjectQueryBuilderTest {
     public void createPluckQuery() {
         FieldMask m = FieldMask.newBuilder()
                 .addPaths("meta.name")
-                .addPaths("crawlConfig.extra.extractText")
+                .addPaths("crawlConfig.extra.createScreenshot")
                 .addPaths("meta")
                 .addPaths("crawlConfig.priorityWeight")
                 .build();
@@ -57,7 +57,7 @@ public class ConfigObjectQueryBuilderTest {
         List q = queryBuilder.createPluckQuery();
 
         assertThat(q).containsExactlyInAnyOrder("apiVersion", "kind", "id", "meta",
-                r.hashMap("crawlConfig", r.array(r.hashMap("extra", r.array("extractText")), "priorityWeight")));
+                r.hashMap("crawlConfig", r.array(r.hashMap("extra", r.array("createScreenshot")), "priorityWeight")));
     }
 
     @Test
@@ -69,7 +69,7 @@ public class ConfigObjectQueryBuilderTest {
 
         ConfigObject.Builder cob = ConfigObject.newBuilder();
         cob.getCrawlConfigBuilder().setPriorityWeight(2);
-        cob.getCrawlConfigBuilder().getExtraBuilder().setExtractText(true);
+        cob.getCrawlConfigBuilder().getExtraBuilder().setCreateScreenshot(true);
         cob.getMetaBuilder().setName("foo");
 
         ConfigObjectQueryBuilder queryBuilder = new ConfigObjectQueryBuilder(m);
@@ -93,7 +93,7 @@ public class ConfigObjectQueryBuilderTest {
     public void buildUpdateQuery() {
         FieldMask m = FieldMask.newBuilder()
                 .addPaths("meta.name")
-                .addPaths("crawlConfig.extra.extractText")
+                .addPaths("crawlConfig.extra.createScreenshot")
                 .addPaths("meta")
                 .addPaths("crawlConfig.priorityWeight")
                 .build();

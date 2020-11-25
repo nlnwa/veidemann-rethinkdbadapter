@@ -123,6 +123,7 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
         switch (object.getKind()) {
             case browserScript:
                 checkDependencies(object, Kind.browserConfig, "browserConfig.scriptRef");
+                checkDependencies(object, Kind.crawlJob, "crawlJob.scopeScriptRef");
                 break;
             case crawlEntity:
                 checkDependencies(object, Kind.seed, "seed.entityRef");
@@ -317,24 +318,25 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
             case crawlEntity:
                 break;
             case seed:
-                checkConfigRefKind("entityRef", object.getSeed().getEntityRef(), Kind.crawlEntity);
+                checkConfigRefKind("entityRef", object.getSeed().getEntityRef(), Kind.crawlEntity, true);
                 for (ConfigRef cr : object.getSeed().getJobRefList()) {
-                    checkConfigRefKind("jobRef", cr, Kind.crawlJob);
+                    checkConfigRefKind("jobRef", cr, Kind.crawlJob, true);
                 }
                 break;
             case crawlJob:
-                checkConfigRefKind("scheduleRef", object.getCrawlJob().getScheduleRef(), Kind.crawlScheduleConfig);
-                checkConfigRefKind("crawlConfigRef", object.getCrawlJob().getCrawlConfigRef(), Kind.crawlConfig);
+                checkConfigRefKind("scheduleRef", object.getCrawlJob().getScheduleRef(), Kind.crawlScheduleConfig, false);
+                checkConfigRefKind("crawlConfigRef", object.getCrawlJob().getCrawlConfigRef(), Kind.crawlConfig, true);
+                checkConfigRefKind("scopeScriptRef", object.getCrawlJob().getScopeScriptRef(), Kind.browserScript, true);
                 break;
             case crawlConfig:
-                checkConfigRefKind("collectionRef", object.getCrawlConfig().getCollectionRef(), Kind.collection);
-                checkConfigRefKind("browserConfigRef", object.getCrawlConfig().getBrowserConfigRef(), Kind.browserConfig);
-                checkConfigRefKind("politenessRef", object.getCrawlConfig().getPolitenessRef(), Kind.politenessConfig);
+                checkConfigRefKind("collectionRef", object.getCrawlConfig().getCollectionRef(), Kind.collection, true);
+                checkConfigRefKind("browserConfigRef", object.getCrawlConfig().getBrowserConfigRef(), Kind.browserConfig, true);
+                checkConfigRefKind("politenessRef", object.getCrawlConfig().getPolitenessRef(), Kind.politenessConfig, true);
             case crawlScheduleConfig:
                 break;
             case browserConfig:
                 for (ConfigRef cr : object.getBrowserConfig().getScriptRefList()) {
-                    checkConfigRefKind("scriptRef", cr, Kind.browserScript);
+                    checkConfigRefKind("scriptRef", cr, Kind.browserScript, true);
                 }
                 break;
             case politenessConfig:
@@ -351,8 +353,12 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
 
     }
 
-    private void checkConfigRefKind(String fieldName, ConfigRef configRef, Kind expectedKind) throws DbQueryException, DbConnectionException {
+    private void checkConfigRefKind(String fieldName, ConfigRef configRef, Kind expectedKind, boolean mustBePresent)
+            throws DbQueryException, DbConnectionException {
         if (configRef == ConfigRef.getDefaultInstance()) {
+            if (mustBePresent) {
+                throw new IllegalArgumentException("Reference missing. The field '" + fieldName + "' must have a reference of kind '" + expectedKind + "'");
+            }
             return;
         }
         if (configRef.getKind() != expectedKind) {

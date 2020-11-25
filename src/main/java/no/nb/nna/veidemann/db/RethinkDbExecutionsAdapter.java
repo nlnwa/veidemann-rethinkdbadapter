@@ -434,20 +434,6 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     }
 
     @Override
-    public ExtractedText addExtractedText(ExtractedText extractedText) throws DbException {
-        ensureContainsValue(extractedText, "warc_id");
-        ensureContainsValue(extractedText, "text");
-
-        Map rMap = ProtoUtils.protoToRethink(extractedText);
-        Map<String, Object> response = conn.exec("db-addExtractedText",
-                r.table(Tables.EXTRACTED_TEXT.name)
-                        .insert(rMap)
-                        .optArg("conflict", "error"));
-
-        return extractedText;
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
     public boolean setDesiredPausedState(boolean value) throws DbException {
         String id = "state";
