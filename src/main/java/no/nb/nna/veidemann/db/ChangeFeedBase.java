@@ -22,7 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Spliterator;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
@@ -36,16 +38,16 @@ import java.util.stream.StreamSupport;
 public abstract class ChangeFeedBase<T> implements ChangeFeed<T> {
     private static final Logger LOG = LoggerFactory.getLogger(ChangeFeedBase.class);
 
-    final CursorSpliterator<Map<String, Object>> it;
+    //    final CursorSpliterator<Map<String, Object>> it;
+    final Spliterator<Map<String, Object>> it;
     final Stream<T> stream;
 
     public ChangeFeedBase(Cursor<Map<String, Object>> cursor) {
-        this.it = new CursorSpliterator<>(cursor);
+        CursorSpliterator<Map<String, Object>> it = new CursorSpliterator<>(cursor);
+        this.it = it;
         this.stream = StreamSupport
                 .stream(it, false)
-                .onClose(() -> {
-                    it.close();
-                })
+                .onClose(it::close)
                 .map(o -> {
                     try {
                         return mapper().apply(o);
@@ -54,7 +56,25 @@ public abstract class ChangeFeedBase<T> implements ChangeFeed<T> {
                         return null;
                     }
                 })
-                .filter(o -> o != null);
+                .filter(Objects::nonNull)
+                .distinct();
+    }
+
+    public ChangeFeedBase(List<Map<String, Object>> cursor) {
+        Spliterator<Map<String, Object>> it = cursor.spliterator();
+        this.it = it;
+        this.stream = StreamSupport
+                .stream(it, false)
+                .map(o -> {
+                    try {
+                        return mapper().apply(o);
+                    } catch (Throwable e) {
+                        LOG.error("Error mapping database object", e);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .distinct();
     }
 
     protected abstract Function<Map<String, Object>, T> mapper();
@@ -66,7 +86,9 @@ public abstract class ChangeFeedBase<T> implements ChangeFeed<T> {
 
     @Override
     public void close() {
-        it.close();
+        if (it instanceof CursorSpliterator) {
+            ((CursorSpliterator) it).close();
+        }
     }
 
     private static class CursorSpliterator<T extends Map<String, Object>> implements Spliterator<T>, Closeable {

@@ -17,15 +17,15 @@
 package no.nb.nna.veidemann.db;
 
 import com.rethinkdb.gen.ast.ReqlExpr;
-import com.rethinkdb.gen.ast.Table;
+import no.nb.nna.veidemann.api.config.v1.ConfigObjectOrBuilder;
 import no.nb.nna.veidemann.api.config.v1.ListRequest;
+import no.nb.nna.veidemann.commons.util.ApiTools;
 import no.nb.nna.veidemann.db.fieldmask.ConfigObjectQueryBuilder;
+import no.nb.nna.veidemann.db.queryoptimizer.QueryOptimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-
-import static com.rethinkdb.RethinkDB.r;
 
 public class ListConfigObjectQueryBuilder {
     private static final Logger LOG = LoggerFactory.getLogger(ListConfigObjectQueryBuilder.class);
@@ -39,28 +39,19 @@ public class ListConfigObjectQueryBuilder {
         this.request = request;
         table = RethinkDbConfigAdapter.getTableForKind(request.getKind());
 
-        q = r.table(table.name);
-
-        if (request.getLabelSelectorCount() > 0) {
-            buildSelectorQuery(request.getLabelSelectorList());
-        }
+        QueryOptimizer<ConfigObjectOrBuilder> optimizer = new QueryOptimizer<>(NO_MASK_BUILDER, table);
 
         if (!request.getOrderByPath().isEmpty()) {
-            if (request.getOrderDescending()) {
-                q = q.orderBy().optArg("index",
-                        r.desc(NO_MASK_BUILDER.getSortIndexForPath(request.getOrderByPath())));
-            } else {
-                q = q.orderBy().optArg("index",
-                        r.asc(NO_MASK_BUILDER.getSortIndexForPath(request.getOrderByPath())));
-            }
+            optimizer.wantOrderQuery(request.getOrderByPath(), request.getOrderDescending());
         }
 
         if (request.getIdCount() > 0) {
-            if (q instanceof Table) {
-                q = ((Table) q).getAll(request.getIdList().toArray());
-            } else {
-                q = q.filter(row -> r.expr(request.getIdList().toArray()).contains(row.g("id")));
-            }
+            optimizer.wantIdQuery(request.getIdList());
+        }
+
+        if (request.hasQueryTemplate() && request.hasQueryMask()) {
+            ConfigObjectQueryBuilder queryBuilder = new ConfigObjectQueryBuilder(request.getQueryMask());
+            optimizer.wantFieldMaskQuery(queryBuilder, request.getQueryTemplate());
         }
 
         switch (request.getKind()) {
@@ -68,17 +59,18 @@ public class ListConfigObjectQueryBuilder {
             case crawlEntity:
                 break;
             default:
-                q = q.filter(r.hashMap("kind", request.getKind().name()));
+                optimizer.wantGetAllQuery("kind", request.getKind().name());
         }
+
+        if (request.getLabelSelectorCount() > 0) {
+            parseSelectorQuery(optimizer, request.getLabelSelectorList());
+        }
+
+        q = optimizer.render();
 
         if (!request.getNameRegex().isEmpty()) {
             final String qry = "(?i)" + request.getNameRegex();
             q = q.filter(doc -> doc.g("meta").g("name").match(qry));
-        }
-
-        if (request.hasQueryTemplate() && request.hasQueryMask()) {
-            ConfigObjectQueryBuilder queryBuilder = new ConfigObjectQueryBuilder(request.getQueryMask());
-            q = q.filter(queryBuilder.buildFilterQuery(request.getQueryTemplate()));
         }
     }
 
@@ -111,12 +103,7 @@ public class ListConfigObjectQueryBuilder {
         return query;
     }
 
-    /**
-     * Build a query for a label selector.
-     *
-     * @param selector
-     */
-    void buildSelectorQuery(List<String> selector) {
+    void parseSelectorQuery(QueryOptimizer<ConfigObjectOrBuilder> optimizer, List<String> selector) {
         selector.forEach(s -> {
             String key;
             String value;
@@ -131,42 +118,7 @@ public class ListConfigObjectQueryBuilder {
             }
 
             LOG.debug("Adding selector: {key={}, value={}}", key, value);
-
-            if (!key.isEmpty() && !value.isEmpty() && !value.endsWith("*")) {
-                // Exact match
-                List indexKey = r.array(key, value);
-                q = q.between(indexKey, indexKey).optArg("right_bound", "closed").optArg("index", "label");
-            } else if (!key.isEmpty()) {
-                // Exact match on key, value ends with '*' or is empty
-
-                List startSpan = r.array(key);
-                List endSpan = r.array(key);
-
-                if (value.endsWith("*")) {
-                    String prefix = value.substring(0, value.length() - 1);
-                    startSpan.add(prefix);
-                    endSpan.add(prefix + Character.toString(Character.MAX_VALUE));
-                } else if (value.isEmpty()) {
-                    startSpan.add(r.minval());
-                    endSpan.add(r.maxval());
-                } else {
-                    startSpan.add(value);
-                    endSpan.add(value);
-                }
-
-                q = q.between(startSpan, endSpan).optArg("index", "label");
-            } else {
-                // Key is empty
-                if (value.endsWith("*")) {
-                    String prefix = value.toLowerCase().substring(0, value.length() - 1);
-                    String startSpan = prefix;
-                    String endSpan = prefix + Character.toString(Character.MAX_VALUE);
-                    q = q.between(startSpan, endSpan).optArg("index", "label_value");
-                } else if (!value.isEmpty()) {
-                    q = q.between(value, value).optArg("right_bound", "closed").optArg("index", "label_value");
-                }
-            }
+            optimizer.wantLabelQuery(ApiTools.buildLabel(key, value));
         });
     }
-
 }

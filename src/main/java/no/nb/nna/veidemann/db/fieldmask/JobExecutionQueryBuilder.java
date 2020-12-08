@@ -17,12 +17,11 @@
 package no.nb.nna.veidemann.db.fieldmask;
 
 import no.nb.nna.veidemann.api.commons.v1.FieldMask;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlLogOrBuilder;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatusOrBuilder;
 
 public class JobExecutionQueryBuilder extends RethinkDbFieldMasksQueryBuilder<JobExecutionStatusOrBuilder> {
-    private final static ObjectPathAccessor OBJ_DEF = new ObjectPathAccessor(JobExecutionStatus.class);
+    private final static ObjectPathAccessor<JobExecutionStatusOrBuilder> OBJ_DEF = new ObjectPathAccessor<>(JobExecutionStatus.class);
 
     public JobExecutionQueryBuilder() {
         super(OBJ_DEF);
@@ -37,6 +36,12 @@ public class JobExecutionQueryBuilder extends RethinkDbFieldMasksQueryBuilder<Jo
         addSortable("startTime", "startTime");
         addSortable("jobId", "jobId");
         addSortable("state", "state");
+
+        addPrimaryIndex("id", "id");
+        addIndex("startTime", "startTime");
+        addIndex("jobId", "jobId");
+        addIndex("state", "state");
+        addIndex("jobId_startTime", "jobId", "startTime");
 
         addMinimumReturnedField("id");
     }

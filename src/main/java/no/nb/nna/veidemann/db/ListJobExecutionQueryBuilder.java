@@ -17,66 +17,41 @@
 package no.nb.nna.veidemann.db;
 
 import com.rethinkdb.gen.ast.ReqlExpr;
-import com.rethinkdb.gen.ast.Table;
+import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatusOrBuilder;
 import no.nb.nna.veidemann.api.report.v1.JobExecutionsListRequest;
 import no.nb.nna.veidemann.db.fieldmask.JobExecutionQueryBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import no.nb.nna.veidemann.db.queryoptimizer.QueryOptimizer;
 
-import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.rethinkdb.RethinkDB.r;
-
 public class ListJobExecutionQueryBuilder {
-    private static final Logger LOG = LoggerFactory.getLogger(ListJobExecutionQueryBuilder.class);
     private static final JobExecutionQueryBuilder NO_MASK_BUILDER = new JobExecutionQueryBuilder();
 
-    private ReqlExpr q;
+    private final ReqlExpr q;
     private final JobExecutionsListRequest request;
-    final Tables table;
 
     public ListJobExecutionQueryBuilder(JobExecutionsListRequest request) {
         this.request = request;
-        table = Tables.JOB_EXECUTIONS;
 
-        q = r.table(table.name);
-
-        if (!request.getOrderByPath().isEmpty()) {
-            if (request.getOrderDescending()) {
-                q = q.orderBy().optArg("index",
-                        r.desc(NO_MASK_BUILDER.getSortIndexForPath(request.getOrderByPath())));
-            } else {
-                q = q.orderBy().optArg("index",
-                        r.asc(NO_MASK_BUILDER.getSortIndexForPath(request.getOrderByPath())));
-            }
-        }
-
+        QueryOptimizer<JobExecutionStatusOrBuilder> optimizer = new QueryOptimizer<>(NO_MASK_BUILDER, Tables.JOB_EXECUTIONS);
         if (request.getIdCount() > 0) {
-            if (q instanceof Table) {
-                q = ((Table) q).getAll(request.getIdList().toArray());
-            } else {
-                q = q.filter(row -> r.expr(request.getIdList().toArray()).contains(row.g("id")));
-            }
+            optimizer.wantIdQuery(request.getIdList());
         }
-
         if (request.hasStartTimeFrom() || request.hasStartTimeTo()) {
-            buildStartTimeFilter();
+            optimizer.wantBetweenQuery("startTime", request.getStartTimeFrom(), request.getStartTimeTo());
         }
-
         if (request.getStateCount() > 0) {
-            List<String> stateList = request.getStateList().stream().map(s -> s.name()).collect(Collectors.toList());
-            if (q instanceof Table) {
-                q = ((Table) q).getAll(stateList.toArray()).optArg("index", "state");
-            } else {
-                q = q.filter(row -> r.expr(stateList.toArray()).contains(row.g("state")));
-            }
+            optimizer.wantGetAllQuery("state", request.getStateList().stream().map(Enum::name).collect(Collectors.toList()));
         }
-
         if (request.hasQueryTemplate() && request.hasQueryMask()) {
             JobExecutionQueryBuilder queryBuilder = new JobExecutionQueryBuilder(request.getQueryMask());
-            q = q.filter(queryBuilder.buildFilterQuery(request.getQueryTemplate()));
+            optimizer.wantFieldMaskQuery(queryBuilder, request.getQueryTemplate());
         }
+        if (!request.getOrderByPath().isEmpty()) {
+            optimizer.wantOrderQuery(request.getOrderByPath(), request.getOrderDescending());
+        }
+
+        q = optimizer.render();
     }
 
     public ReqlExpr getListQuery() {
@@ -100,25 +75,5 @@ public class ListJobExecutionQueryBuilder {
 
     public ReqlExpr getCountQuery() {
         return q.count();
-    }
-
-    void buildStartTimeFilter() {
-        Object from = r.minval();
-        Object to = r.maxval();
-
-        if (request.hasStartTimeFrom()) {
-            from = ProtoUtils.tsToOdt(request.getStartTimeFrom());
-        }
-        if (request.hasStartTimeTo()) {
-            to = ProtoUtils.tsToOdt(request.getStartTimeTo());
-        }
-
-        if (q instanceof Table) {
-            q = ((Table) q).between(from, to).optArg("index", "startTime");
-        } else {
-            Object f = from;
-            Object t = to;
-            q = q.filter(row -> row.g("startTime").ge(f).and(row.g("startTime").lt(t)));
-        }
     }
 }

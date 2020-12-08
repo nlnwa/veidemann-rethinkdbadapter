@@ -19,11 +19,9 @@ package no.nb.nna.veidemann.db.fieldmask;
 import no.nb.nna.veidemann.api.commons.v1.FieldMask;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatusOrBuilder;
-import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
-import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatusOrBuilder;
 
 public class CrawlExecutionQueryBuilder extends RethinkDbFieldMasksQueryBuilder<CrawlExecutionStatusOrBuilder> {
-    private final static ObjectPathAccessor OBJ_DEF = new ObjectPathAccessor(CrawlExecutionStatus.class);
+    private final static ObjectPathAccessor<CrawlExecutionStatusOrBuilder> OBJ_DEF = new ObjectPathAccessor<>(CrawlExecutionStatus.class);
 
     public CrawlExecutionQueryBuilder() {
         super(OBJ_DEF);
@@ -40,7 +38,7 @@ public class CrawlExecutionQueryBuilder extends RethinkDbFieldMasksQueryBuilder<
         addSortable("state", "state");
         addSortable("seedId", "seedId");
 
-        addIndex("id", "id");
+        addPrimaryIndex("id", "id");
         addIndex("startTime", "startTime");
         addIndex("jobId", "jobId");
         addIndex("state", "state");

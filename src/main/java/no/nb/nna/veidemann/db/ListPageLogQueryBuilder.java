@@ -17,21 +17,15 @@
 package no.nb.nna.veidemann.db;
 
 import com.rethinkdb.gen.ast.ReqlExpr;
-import com.rethinkdb.gen.ast.Table;
-import no.nb.nna.veidemann.api.report.v1.CrawlLogListRequest;
+import no.nb.nna.veidemann.api.frontier.v1.PageLogOrBuilder;
 import no.nb.nna.veidemann.api.report.v1.PageLogListRequest;
-import no.nb.nna.veidemann.db.fieldmask.CrawlLogQueryBuilder;
 import no.nb.nna.veidemann.db.fieldmask.PageLogQueryBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import static com.rethinkdb.RethinkDB.r;
+import no.nb.nna.veidemann.db.queryoptimizer.QueryOptimizer;
 
 public class ListPageLogQueryBuilder {
-    private static final Logger LOG = LoggerFactory.getLogger(ListPageLogQueryBuilder.class);
     private static final PageLogQueryBuilder NO_MASK_BUILDER = new PageLogQueryBuilder();
 
-    private ReqlExpr q;
+    private final ReqlExpr q;
     private final PageLogListRequest request;
     final Tables table;
 
@@ -39,30 +33,22 @@ public class ListPageLogQueryBuilder {
         this.request = request;
         table = Tables.PAGE_LOG;
 
-        q = r.table(table.name);
+        QueryOptimizer<PageLogOrBuilder> optimizer = new QueryOptimizer<>(NO_MASK_BUILDER, table);
 
         if (!request.getOrderByPath().isEmpty()) {
-            if (request.getOrderDescending()) {
-                q = q.orderBy().optArg("index",
-                        r.desc(NO_MASK_BUILDER.getSortIndexForPath(request.getOrderByPath())));
-            } else {
-                q = q.orderBy().optArg("index",
-                        r.asc(NO_MASK_BUILDER.getSortIndexForPath(request.getOrderByPath())));
-            }
+            optimizer.wantOrderQuery(request.getOrderByPath(), request.getOrderDescending());
         }
 
         if (request.getWarcIdCount() > 0) {
-            if (q instanceof Table) {
-                q = ((Table) q).getAll(request.getWarcIdList().toArray());
-            } else {
-                q = q.filter(row -> r.expr(request.getWarcIdList().toArray()).contains(row.g("id")));
-            }
+            optimizer.wantIdQuery(request.getWarcIdList());
         }
 
         if (request.hasQueryTemplate() && request.hasQueryMask()) {
             PageLogQueryBuilder queryBuilder = new PageLogQueryBuilder(request.getQueryMask());
-            q = q.filter(queryBuilder.buildFilterQuery(request.getQueryTemplate()));
+            optimizer.wantFieldMaskQuery(queryBuilder, request.getQueryTemplate());
         }
+
+        q = optimizer.render();
     }
 
     public ReqlExpr getListQuery() {

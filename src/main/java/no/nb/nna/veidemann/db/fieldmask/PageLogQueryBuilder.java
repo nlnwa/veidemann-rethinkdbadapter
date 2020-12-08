@@ -17,12 +17,11 @@
 package no.nb.nna.veidemann.db.fieldmask;
 
 import no.nb.nna.veidemann.api.commons.v1.FieldMask;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlLogOrBuilder;
 import no.nb.nna.veidemann.api.frontier.v1.PageLog;
 import no.nb.nna.veidemann.api.frontier.v1.PageLogOrBuilder;
 
 public class PageLogQueryBuilder extends RethinkDbFieldMasksQueryBuilder<PageLogOrBuilder> {
-    private final static ObjectPathAccessor OBJ_DEF = new ObjectPathAccessor(PageLog.class);
+    private final static ObjectPathAccessor<PageLogOrBuilder> OBJ_DEF = new ObjectPathAccessor<>(PageLog.class);
 
     public PageLogQueryBuilder() {
         super(OBJ_DEF);
@@ -38,6 +37,9 @@ public class PageLogQueryBuilder extends RethinkDbFieldMasksQueryBuilder<PageLog
         addSortable("meta.label", "label");
         addSortable("meta.lastModified", "lastModified");
         addSortable("meta.lastModifiedBy", "lastModifiedBy");
+
+        addPrimaryIndex("warcId", "warcId");
+        addIndex("executionId", "executionId");
 
         addReadOnlyPath("id");
         addReadOnlyPath("apiVersion");

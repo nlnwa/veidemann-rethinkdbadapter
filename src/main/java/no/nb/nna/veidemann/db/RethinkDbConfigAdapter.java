@@ -1,14 +1,8 @@
 package no.nb.nna.veidemann.db;
 
 import com.google.protobuf.Descriptors.FieldDescriptor;
-import com.google.protobuf.Message;
 import com.rethinkdb.RethinkDB;
-import com.rethinkdb.gen.ast.Insert;
-import com.rethinkdb.gen.ast.ReqlExpr;
-import com.rethinkdb.gen.ast.Update;
-import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Cursor;
-import no.nb.nna.veidemann.api.config.v1.LogLevels;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject.SpecCase;
 import no.nb.nna.veidemann.api.config.v1.ConfigObjectOrBuilder;
@@ -18,6 +12,7 @@ import no.nb.nna.veidemann.api.config.v1.GetLabelKeysRequest;
 import no.nb.nna.veidemann.api.config.v1.Kind;
 import no.nb.nna.veidemann.api.config.v1.LabelKeysResponse;
 import no.nb.nna.veidemann.api.config.v1.ListCountResponse;
+import no.nb.nna.veidemann.api.config.v1.LogLevels;
 import no.nb.nna.veidemann.api.config.v1.UpdateRequest;
 import no.nb.nna.veidemann.api.config.v1.UpdateResponse;
 import no.nb.nna.veidemann.commons.auth.EmailContextKey;
@@ -76,17 +71,26 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
     public ChangeFeed<ConfigObject> listConfigObjects(no.nb.nna.veidemann.api.config.v1.ListRequest request) throws DbQueryException, DbConnectionException {
         ListConfigObjectQueryBuilder q = new ListConfigObjectQueryBuilder(request);
 
-        Cursor<Map<String, Object>> res = conn.exec("db-listConfigObjects", q.getListQuery());
-
-        return new ChangeFeedBase<ConfigObject>(res) {
-            @Override
-            protected Function<Map<String, Object>, ConfigObject> mapper() {
-                return co -> {
-                    ConfigObject res = ProtoUtils.rethinkToProto(co, ConfigObject.class);
-                    return res;
-                };
-            }
-        };
+        Object res = conn.exec("db-listConfigObjects", q.getListQuery());
+        if (res instanceof Cursor) {
+            return new ChangeFeedBase<>((Cursor<Map<String, Object>>) res) {
+                @Override
+                protected Function<Map<String, Object>, ConfigObject> mapper() {
+                    return co -> {
+                        return ProtoUtils.rethinkToProto(co, ConfigObject.class);
+                    };
+                }
+            };
+        } else {
+            return new ChangeFeedBase<>((List<Map<String, Object>>) res) {
+                @Override
+                protected Function<Map<String, Object>, ConfigObject> mapper() {
+                    return co -> {
+                        return ProtoUtils.rethinkToProto(co, ConfigObject.class);
+                    };
+                }
+            };
+        }
     }
 
     @Override

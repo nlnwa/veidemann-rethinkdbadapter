@@ -353,12 +353,9 @@ public class RethinkDbConfigAdapterIT {
 
         req6.setOrderDescending(false);
         req6.setOrderByPath("meta.label");
-        req6.setNameRegex("c[s|j]");
-        assertThat(configAdapter.listConfigObjects(req6.build()).stream())
-                .startsWith(crawlScheduleConfig3)
-                .containsSubsequence(crawlScheduleConfig3, crawlScheduleConfig1)
-                .containsOnlyOnce(crawlScheduleConfig1)
-                .doesNotContain(crawlScheduleConfig2, crawlJob1);
+        req6.setNameRegex("c[s|j].[1|3]");
+        assertThat(configAdapter.listConfigObjects(req6.build()).stream().toArray())
+                .containsExactly(crawlScheduleConfig3, crawlScheduleConfig1);
 
         // Test all options at once
         ListRequest.Builder req7 = ListRequest.newBuilder()

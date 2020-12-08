@@ -24,7 +24,7 @@ import org.apache.logging.log4j.util.Strings;
 import java.util.ArrayList;
 import java.util.List;
 
-class PathElem<T extends MessageOrBuilder> {
+public class PathElem<T extends MessageOrBuilder> {
     private final ObjectPathAccessor<T> objectDef;
     String name;
     String fullName;
@@ -40,21 +40,37 @@ class PathElem<T extends MessageOrBuilder> {
         this.name = name;
     }
 
-    private void addChild(PathElem e) {
+    public FieldDescriptor getDescriptor() {
+        return descriptor;
+    }
+
+    public PathElem<T> getParent() {
+        return parent;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    private void addChild(PathElem<T> e) {
         e.parent = this;
         children.add(e);
     }
 
     PathElem<T> getOrCreateChild(String fullName, String name) {
         PathElem<T> e = null;
-        for (PathElem p : children) {
+        for (PathElem<T> p : children) {
             if (p.name.equals(name)) {
                 e = p;
                 break;
             }
         }
         if (e == null) {
-            e = new PathElem<T>(objectDef, fullName, name);
+            e = new PathElem<>(objectDef, fullName, name);
             addChild(e);
         }
         return e;
@@ -80,7 +96,7 @@ class PathElem<T extends MessageOrBuilder> {
     }
 
     public String regex() {
-        final StringBuffer sb = new StringBuffer(name);
+        final StringBuilder sb = new StringBuilder(name);
         if (isRepeated) {
             sb.append("+");
         }

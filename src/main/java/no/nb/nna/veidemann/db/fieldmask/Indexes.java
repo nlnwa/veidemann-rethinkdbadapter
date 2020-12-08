@@ -20,23 +20,43 @@ import com.google.protobuf.MessageOrBuilder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.StringJoiner;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Indexes<T extends MessageOrBuilder> {
+    Index primary;
     Map<String, List<Index>> indexes = new HashMap<>();
 
     protected void addIndex(String indexName, String... path) {
         for (String p : path) {
-            indexes.computeIfAbsent(p, v -> new ArrayList<>()).add(new Index(indexName, path));
+            indexes.computeIfAbsent(p, v -> new ArrayList<>()).add(new Index(indexName, false, path));
         }
+    }
+
+    protected void addIgnoreCaseIndex(String indexName, String... path) {
+        for (String p : path) {
+            indexes.computeIfAbsent(p, v -> new ArrayList<>()).add(new Index(indexName, false, 0, true, path));
+        }
+    }
+
+    protected void addPrimaryIndex(String indexName, String path) {
+        primary = new Index(indexName, true, path);
+        indexes.computeIfAbsent(path, v -> new ArrayList<>()).add(primary);
+    }
+
+    protected Index getPrimary() {
+        return primary;
     }
 
     public Index getBestIndex(ObjectOrMask<T> maskedObject) {
         Index candidate = null;
-        for (PathElem pe : maskedObject.getPaths()) {
+        for (PathElem<T> pe : maskedObject.getPaths()) {
             List<Index> idxList = indexes.get(pe.fullName);
             if (idxList == null) {
                 continue;
@@ -63,21 +83,104 @@ public class Indexes<T extends MessageOrBuilder> {
         return candidate;
     }
 
-    public class Index {
-        final String IndexName;
-        final String[] path;
+    public List<Index> getBestIndexes(ObjectOrMask<T> maskedObject) {
+        String[] paths = maskedObject.getPaths().stream().map(p -> p.fullName).toArray(String[]::new);
+        return getBestIndexes(paths);
+    }
 
-        public Index(String indexName, String... path) {
-            IndexName = indexName;
+    public List<Index> getBestIndexes(String... path) {
+        Set<Index> bestIndexes = new HashSet<>();
+        List<Index> idxList = new ArrayList<>();
+        for (String pe : path) {
+            List<Index> l = indexes.get(pe);
+            if (l == null) {
+                continue;
+            }
+            idxList.addAll(l);
+        }
+        for (Index index : idxList) {
+            if (index.isPrimary()) {
+                idxList.clear();
+                idxList.add(index);
+                path = new String[]{index.path[0]};
+                break;
+            }
+        }
+        for (Index idx : idxList) {
+            int m = 0;
+            for (int i = 0; i < idx.path.length; i++) {
+                String p = idx.path[i];
+                if (path.length >= (i + 1) && p.equals(path[i])) {
+                    m++;
+                } else {
+                    break;
+                }
+            }
+            if (m > 0) {
+                int priority = path.length + idx.path.length - 2 * m;
+                bestIndexes.add(idx.withPriority(priority));
+            }
+        }
+        return bestIndexes.stream().sorted(Comparator.comparingInt(o -> o.priority)).collect(Collectors.toList());
+    }
+
+    public static class Index {
+        public final String indexName;
+        public final String[] path;
+        final boolean primary;
+        int priority;
+        final boolean ignoreCase;
+
+        public Index(String indexName, boolean primary, String... path) {
+            this(indexName, primary, 0, false, path);
+        }
+
+        public Index(String indexName, boolean primary, int priority, String... path) {
+            this(indexName, primary, priority, false, path);
+        }
+
+        public Index(String indexName, boolean primary, int priority, boolean ignoreCase, String... path) {
+            this.indexName = indexName;
             this.path = path;
+            this.primary = primary;
+            this.priority = priority;
+            this.ignoreCase = ignoreCase;
+        }
+
+        public Index withPriority(int priority) {
+            return new Index(this.indexName, this.primary, priority, ignoreCase, this.path);
+        }
+
+        public boolean isPrimary() {
+            return primary;
+        }
+
+        public boolean isIgnoreCase() {
+            return ignoreCase;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Index that = (Index) o;
+            return priority == that.priority && indexName.equals(that.indexName) && Arrays.deepEquals(path, that.path);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(priority, indexName, Arrays.hashCode(path));
         }
 
         @Override
         public String toString() {
-            return new StringJoiner(", ", Indexes.class.getSimpleName() + "[", "]")
-                    .add("IndexName='" + IndexName + "'")
-                    .add("path=" + Arrays.toString(path))
-                    .toString();
+            return "Index{" +
+                    "indexName='" + indexName + '\'' +
+                    ", path=" + Arrays.toString(path) +
+                    ", priority=" + priority +
+                    ", primary=" + primary +
+                    ", ignoreCase=" + ignoreCase +
+                    '}';
         }
     }
 }

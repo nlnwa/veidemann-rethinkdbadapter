@@ -21,10 +21,12 @@ import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.Timestamp;
 import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.ReqlFunction1;
+import com.rethinkdb.gen.ast.Table;
 import com.rethinkdb.model.MapObject;
 import no.nb.nna.veidemann.db.ProtoUtils;
 import no.nb.nna.veidemann.db.fieldmask.Indexes.Index;
 import no.nb.nna.veidemann.db.fieldmask.MaskedObject.UpdateType;
+import no.nb.nna.veidemann.db.queryoptimizer.QueryOptimizer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,8 +57,32 @@ public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder
         indexes.addIndex(indexName, path);
     }
 
+    protected void addIgnoreCaseIndex(String indexName, String... path) {
+        indexes.addIgnoreCaseIndex(indexName, path);
+    }
+
+    protected void addPrimaryIndex(String indexName, String path) {
+        indexes.addPrimaryIndex(indexName, path);
+    }
+
+    public Index getPrimaryIndex() {
+        return indexes.getPrimary();
+    }
+
+    public ObjectOrMask<T> getMaskedObject() {
+        return maskedObject;
+    }
+
     public Index getBestIndex() {
         return indexes.getBestIndex(maskedObject);
+    }
+
+    public List<Index> getBestIndexes() {
+        return indexes.getBestIndexes(maskedObject);
+    }
+
+    public List<Index> getBestIndexes(String... path) {
+        return indexes.getBestIndexes(path);
     }
 
     protected void addReadOnlyPath(String path) {
@@ -69,6 +95,25 @@ public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder
 
     public String getSortIndexForPath(String path) {
         return sortables.get(path);
+    }
+
+    public ReqlExpr createOrderByQuery(ReqlExpr q, String fieldName, String indexName, boolean descending) {
+        if (q instanceof Table && indexName != null) {
+            if (descending) {
+                q = q.orderBy().optArg("index",
+                        r.desc(indexName));
+            } else {
+                q = q.orderBy().optArg("index",
+                        r.asc(indexName));
+            }
+        } else {
+            if (descending) {
+                q = q.orderBy(r.desc(fieldName));
+            } else {
+                q = q.orderBy(r.asc(fieldName));
+            }
+        }
+        return q;
     }
 
     public List createPluckQuery() {
@@ -86,6 +131,21 @@ public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder
             List cp = r.array();
             p.add(r.hashMap(e.name, cp));
             e.children.forEach(c -> innerCreatePluckQuery(cp, c));
+        }
+    }
+
+    public void elems(QueryOptimizer<T> optimizer, T queryTemplate) {
+        for (PathElem<T> p : maskedObject.getPaths()) {
+            Object val = p.getValue(queryTemplate);
+            List values = r.array();
+            if (p.descriptor.isRepeated()) {
+                for (Object v : (List) ProtoUtils.protoFieldToRethink(p.descriptor, val)) {
+                    values.add(v);
+                }
+            } else {
+                values.add(ProtoUtils.protoFieldToRethink(p.descriptor, val));
+            }
+            optimizer.wantMaskElem(p.fullName, values);
         }
     }
 
@@ -120,7 +180,7 @@ public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder
         return exp;
     }
 
-    private ReqlExpr buildGetFieldExpression(PathElem<T> p, ReqlExpr parentExpr) {
+    public ReqlExpr buildGetFieldExpression(PathElem<T> p, ReqlExpr parentExpr) {
         if (!p.parent.name.isEmpty()) {
             parentExpr = buildGetFieldExpression(p.parent, parentExpr);
         }
