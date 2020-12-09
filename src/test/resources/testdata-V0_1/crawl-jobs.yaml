@@ -2,6 +2,8 @@ id: "c856d12d-14e0-4554-9bc8-11189b8ab01f"
 meta:
     name: "Default"
     description: "The default job definition"
+    created: "2020-03-12T16:45:04.052Z"
+    createdBy: test@example.com
     label:
         - key: "type"
           value: "default"
@@ -14,6 +16,8 @@ id: "8a260b58-2877-462f-b0b7-b5e4a8dde507"
 meta:
     name: "Every day"
     description: "A job running every day"
+    created: "2020-03-12T16:45:04.052Z"
+    createdBy: test@example.com
     label:
         - key: "type"
           value: "default"
@@ -26,6 +30,8 @@ id: "64ea2951-014a-4c74-b68f-d5f7855dcb04"
 meta:
     name: "Work hours"
     description: "A job running every hour between 7 and 15 UTC, Monday through Friday"
+    created: "2020-03-12T16:45:04.052Z"
+    createdBy: test@example.com
     label:
         - key: "type"
           value: "default"
@@ -38,6 +44,8 @@ id: "e46863ae-d076-46ca-8be3-8a8ef72e709e"
 meta:
     name: "Unscheduled"
     description: "A job which will never trigger. Suitable for manual runs"
+    created: "2020-03-12T16:45:04.052Z"
+    createdBy: test@example.com
     label:
         - key: "type"
           value: "default"

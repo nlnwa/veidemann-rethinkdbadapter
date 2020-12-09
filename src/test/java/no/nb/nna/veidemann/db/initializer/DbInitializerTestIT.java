@@ -274,7 +274,8 @@ public class DbInitializerTestIT {
                         assertThat(r.get("kind")).isEqualTo("crawlJob");
                         assertThat(r).containsKey("crawlJob");
                         assertThat((Map) r.get("crawlJob")).containsKey("crawlConfigRef");
-                        assertThat(((Map<String, Map>) r.get("crawlJob")).get("crawlConfigRef")).containsEntry("id", "f8609d3f-9bf2-416c-ad50-7774b7d2dd95");
+                        assertThat(((Map<String, Map>) r.get("crawlJob")).get("crawlConfigRef"))
+                                .containsEntry("id", "f8609d3f-9bf2-416c-ad50-7774b7d2dd95");
                     });
         }
 
@@ -290,9 +291,28 @@ public class DbInitializerTestIT {
                         assertThat(r.get("kind")).isEqualTo("crawlJob");
                         assertThat(r).containsKey("crawlJob");
                         assertThat((Map<String, Map>) r.get("crawlJob")).containsKey("crawlConfigRef");
+                        // Check that scopeScriptRef is set to default. Introduced in 1.12
+                        assertThat((Map<String, Map>) r.get("crawlJob")).containsKey("scopeScriptRef");
                         if (r.get("id").equals("c856d12d-14e0-4554-9bc8-11189b8ab01f")) {
-                            assertThat(((Map<String, Map>) r.get("crawlJob")).get("scheduleRef")).containsEntry("id", "5604f0cc-315d-4091-8d6e-1b17a7eb990b");
+                            assertThat(((Map<String, Map>) r.get("crawlJob")).get("scheduleRef"))
+                                    .containsEntry("id", "5604f0cc-315d-4091-8d6e-1b17a7eb990b");
                         }
+                    });
+        }
+
+        // Check that configRefs index includes scopeScriptRef. Introduced in 1.12
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
+                .getAll(r.array(Kind.browserScript.name(), "bfde69f5-1e4c-4207-a209-263058b9e41f"))
+                .optArg("index", "configRefs"))) {
+            assertThat(configObjects.iterator()).toIterable()
+                    .hasSize(4)
+                    .allSatisfy(r -> {
+                        assertThat(r.get("apiVersion")).isEqualTo("v1");
+                        assertThat(r.get("kind")).isEqualTo("crawlJob");
+                        assertThat(r).containsKey("crawlJob");
+                        assertThat((Map<String, Map>) r.get("crawlJob")).containsKey("scopeScriptRef");
+                        assertThat(((Map<String, Map>) r.get("crawlJob")).get("scopeScriptRef"))
+                                .containsEntry("id", "bfde69f5-1e4c-4207-a209-263058b9e41f");
                     });
         }
 
