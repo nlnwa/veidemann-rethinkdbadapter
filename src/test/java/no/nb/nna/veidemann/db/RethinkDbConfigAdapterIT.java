@@ -19,7 +19,11 @@ import com.rethinkdb.RethinkDB;
 import io.grpc.Context;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject;
 import no.nb.nna.veidemann.api.config.v1.ConfigRef;
+import no.nb.nna.veidemann.api.config.v1.CrawlConfig;
+import no.nb.nna.veidemann.api.config.v1.CrawlJob;
+import no.nb.nna.veidemann.api.config.v1.CrawlScheduleConfig;
 import no.nb.nna.veidemann.api.config.v1.GetLabelKeysRequest;
+import no.nb.nna.veidemann.api.config.v1.Kind;
 import no.nb.nna.veidemann.api.config.v1.Label;
 import no.nb.nna.veidemann.api.config.v1.ListRequest;
 import no.nb.nna.veidemann.api.config.v1.LogLevels;
@@ -39,13 +43,7 @@ import org.junit.Test;
 import java.util.Comparator;
 import java.util.Map;
 
-import static no.nb.nna.veidemann.api.config.v1.Kind.browserConfig;
-import static no.nb.nna.veidemann.api.config.v1.Kind.browserScript;
-import static no.nb.nna.veidemann.api.config.v1.Kind.crawlEntity;
-import static no.nb.nna.veidemann.api.config.v1.Kind.crawlJob;
-import static no.nb.nna.veidemann.api.config.v1.Kind.crawlScheduleConfig;
-import static no.nb.nna.veidemann.api.config.v1.Kind.politenessConfig;
-import static no.nb.nna.veidemann.api.config.v1.Kind.seed;
+import static no.nb.nna.veidemann.api.config.v1.Kind.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -65,6 +63,9 @@ public class RethinkDbConfigAdapterIT {
     ConfigObject crawlJob2;
     ConfigObject politenessConfig1;
     ConfigObject browserScript1;
+    ConfigObject crawlConfig1;
+    ConfigObject browserConfig1;
+    ConfigObject collectionConfig1;
 
     @Before
     public void init() throws DbException {
@@ -97,84 +98,74 @@ public class RethinkDbConfigAdapterIT {
 
         configAdapter = (RethinkDbConfigAdapter) DbService.getInstance().getConfigAdapter();
 
-        ConfigObject.Builder csc1 = ConfigObject.newBuilder()
-                .setApiVersion("v1")
-                .setKind(crawlScheduleConfig);
-        csc1.getMetaBuilder()
-                .setName("csc1")
-                .setDescription("desc1")
-                .addLabelBuilder().setKey("foo").setValue("bar");
-        csc1.getCrawlScheduleConfigBuilder()
-                .setCronExpression("cron1");
+        browserConfig1 = configAdapter.saveConfigObject(
+                createConfBuilder(browserConfig, "bc1").build());
 
-        ConfigObject.Builder csc2 = ConfigObject.newBuilder()
-                .setApiVersion("v1")
-                .setKind(crawlScheduleConfig);
-        csc2.getMetaBuilder()
-                .setName("csc2")
-                .setDescription("desc2");
-        csc2.getCrawlScheduleConfigBuilder()
-                .setCronExpression("cron2");
+        politenessConfig1 = configAdapter.saveConfigObject(
+                createConfBuilder(politenessConfig, "pc1").build());
 
-        ConfigObject.Builder csc3 = ConfigObject.newBuilder()
-                .setApiVersion("v1")
-                .setKind(crawlScheduleConfig);
-        csc3.getMetaBuilder()
-                .setName("csc3")
-                .setDescription("desc3")
-                .addLabelBuilder().setKey("foo").setValue("bar");
-        csc3.getMetaBuilder().addLabelBuilder().setKey("aaa").setValue("bbb");
-        csc3.getCrawlScheduleConfigBuilder()
-                .setCronExpression("cron3");
-        crawlScheduleConfig1 = configAdapter.saveConfigObject(csc1.build());
-        crawlScheduleConfig2 = configAdapter.saveConfigObject(csc2.build());
-        crawlScheduleConfig3 = configAdapter.saveConfigObject(csc3.build());
+        collectionConfig1 = configAdapter.saveConfigObject(
+                createConfBuilder(collection, "col1").build());
 
-        ConfigObject.Builder cj1 = ConfigObject.newBuilder()
-                .setApiVersion("v1")
-                .setKind(crawlJob);
-        cj1.getMetaBuilder()
-                .setName("cj1")
-                .setDescription("desc4")
-                .addLabelBuilder().setKey("foo").setValue("bar");
-        cj1.getMetaBuilder().addLabelBuilder().setKey("aaa").setValue("bbb");
-        cj1.getCrawlJobBuilder().getScheduleRefBuilder()
-                .setKind(crawlScheduleConfig)
-                .setId(crawlScheduleConfig1.getId());
+        crawlConfig1 = configAdapter.saveConfigObject(
+                createConfBuilder(crawlConfig, "cc1")
+                        .setCrawlConfig(CrawlConfig.newBuilder()
+                                .setBrowserConfigRef(ApiTools.refForConfig(browserConfig1))
+                                .setPolitenessRef(ApiTools.refForConfig(politenessConfig1))
+                                .setCollectionRef(ApiTools.refForConfig(collectionConfig1)))
+                        .build());
 
-        ConfigObject.Builder cj2 = ConfigObject.newBuilder()
-                .setApiVersion("v1")
-                .setKind(crawlJob);
-        cj2.getMetaBuilder()
-                .setName("cj2")
-                .setDescription("desc5")
-                .addLabelBuilder().setKey("foo").setValue("bar");
-        cj2.getMetaBuilder().addLabelBuilder().setKey("aaa").setValue("bbb");
-        cj2.getCrawlJobBuilder().getScheduleRefBuilder()
-                .setKind(crawlScheduleConfig)
-                .setId(crawlScheduleConfig1.getId());
-        crawlJob1 = configAdapter.saveConfigObject(cj1.build());
-        crawlJob2 = configAdapter.saveConfigObject(cj2.build());
+        crawlScheduleConfig1 = configAdapter.saveConfigObject(
+                createConfBuilder(crawlScheduleConfig, "csc1", ApiTools.buildLabel("foo", "bar"))
+                        .setCrawlScheduleConfig(CrawlScheduleConfig.newBuilder()
+                                .setCronExpression("cron1"))
+                        .build());
 
-        ConfigObject.Builder pc1 = ConfigObject.newBuilder()
-                .setApiVersion("v1")
-                .setKind(politenessConfig);
-        pc1.getMetaBuilder()
-                .setName("pc1")
-                .setDescription("desc6");
-        politenessConfig1 = configAdapter.saveConfigObject(pc1.build());
+        crawlScheduleConfig2 = configAdapter.saveConfigObject(
+                createConfBuilder(crawlScheduleConfig, "csc2")
+                        .setCrawlScheduleConfig(CrawlScheduleConfig.newBuilder()
+                                .setCronExpression("cron2"))
+                        .build());
 
-        ConfigObject.Builder bs1 = ConfigObject.newBuilder()
-                .setApiVersion("v1")
-                .setKind(browserScript);
-        bs1.getMetaBuilder()
-                .setName("bs1");
-        browserScript1 = configAdapter.saveConfigObject(bs1.build());
+        crawlScheduleConfig3 = configAdapter.saveConfigObject(
+                createConfBuilder(crawlScheduleConfig, "csc3",
+                        ApiTools.buildLabel("foo", "bar"), ApiTools.buildLabel("aaa", "bbb"))
+                        .setCrawlScheduleConfig(CrawlScheduleConfig.newBuilder()
+                                .setCronExpression("cron3"))
+                        .build());
+
+        browserScript1 = configAdapter.saveConfigObject(
+                createConfBuilder(browserScript, "bs1").build());
+
+        crawlJob1 = configAdapter.saveConfigObject(
+                createConfBuilder(crawlJob, "cj1",
+                        ApiTools.buildLabel("foo", "bar"), ApiTools.buildLabel("aaa", "bbb"))
+                        .setCrawlJob(CrawlJob.newBuilder()
+                                .setScheduleRef(ApiTools.refForConfig(crawlScheduleConfig1))
+                                .setCrawlConfigRef(ApiTools.refForConfig(crawlConfig1))
+                                .setScopeScriptRef(ApiTools.refForConfig(browserScript1)))
+                        .build());
+
+        crawlJob2 = configAdapter.saveConfigObject(
+                createConfBuilder(crawlJob, "cj2",
+                        ApiTools.buildLabel("foo", "bar"), ApiTools.buildLabel("aaa", "bbb"))
+                        .setCrawlJob(CrawlJob.newBuilder()
+                                .setScheduleRef(ApiTools.refForConfig(crawlScheduleConfig1))
+                                .setCrawlConfigRef(ApiTools.refForConfig(crawlConfig1))
+                                .setScopeScriptRef(ApiTools.refForConfig(browserScript1)))
+                        .build());
     }
 
     @After
     public void shutdown() {
         DbService.getInstance().close();
+    }
+
+    private ConfigObject.Builder createConfBuilder(Kind kind, String name, Label... label) {
+        return ConfigObject.newBuilder()
+                .setApiVersion("v1")
+                .setKind(kind)
+                .setMeta(ApiTools.buildMeta(name, name + "desc", label));
     }
 
     @Test
@@ -234,13 +225,11 @@ public class RethinkDbConfigAdapterIT {
                 );
 
         // Test wrong ConfiRef kind
-        ConfigObject.Builder co3 = ConfigObject.newBuilder()
-                .setApiVersion("v1")
-                .setKind(seed);
-        co3.getMetaBuilder()
-                .setName("Default");
+        ConfigObject entity = configAdapter.saveConfigObject(createConfBuilder(crawlEntity, "en1").build());
+        ConfigObject.Builder co3 = createConfBuilder(seed, "Default");
         co3.getSeedBuilder()
                 .setDisabled(true)
+                .setEntityRef(ApiTools.refForConfig(entity))
                 .addJobRef(ConfigRef.newBuilder().setKind(browserScript).setId("script"));
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() ->
@@ -248,13 +237,10 @@ public class RethinkDbConfigAdapterIT {
                 ).withMessage("jobRef has wrong kind: browserScript");
 
         // Test nonexisting ConfiRef
-        ConfigObject.Builder co4 = ConfigObject.newBuilder()
-                .setApiVersion("v1")
-                .setKind(seed);
-        co4.getMetaBuilder()
-                .setName("Default");
+        ConfigObject.Builder co4 = createConfBuilder(seed, "Default");
         co4.getSeedBuilder()
                 .setDisabled(true)
+                .setEntityRef(ApiTools.refForConfig(entity))
                 .addJobRef(ConfigRef.newBuilder().setKind(crawlJob).setId("job"));
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() ->
@@ -320,7 +306,7 @@ public class RethinkDbConfigAdapterIT {
                 .setKind(crawlScheduleConfig);
         req5.getQueryTemplateBuilder().getMetaBuilder()
                 .setName("csc3")
-                .setDescription("desc2")
+                .setDescription("csc2desc")
                 .addLabelBuilder().setKey("foo").setValue("bar");
 
         ListRequest.Builder lr = req5.clone();
@@ -367,12 +353,9 @@ public class RethinkDbConfigAdapterIT {
 
         req6.setOrderDescending(false);
         req6.setOrderByPath("meta.label");
-        req6.setNameRegex("c[s|j]");
-        assertThat(configAdapter.listConfigObjects(req6.build()).stream())
-                .startsWith(crawlScheduleConfig3)
-                .containsSubsequence(crawlScheduleConfig3, crawlScheduleConfig1)
-                .containsOnlyOnce(crawlScheduleConfig1)
-                .doesNotContain(crawlScheduleConfig2, crawlJob1);
+        req6.setNameRegex("c[s|j].[1|3]");
+        assertThat(configAdapter.listConfigObjects(req6.build()).stream().toArray())
+                .containsExactly(crawlScheduleConfig3, crawlScheduleConfig1);
 
         // Test all options at once
         ListRequest.Builder req7 = ListRequest.newBuilder()
@@ -382,7 +365,7 @@ public class RethinkDbConfigAdapterIT {
                 .setOrderByPath("meta.label")
                 .setNameRegex("csc");
         req7.getQueryTemplateBuilder()
-                .getMetaBuilder().setDescription("desc1");
+                .getMetaBuilder().setDescription("csc1desc");
         req7.getQueryMaskBuilder().addPaths("meta.description");
         assertThat(configAdapter.listConfigObjects(req7.build()).stream())
                 .contains(crawlScheduleConfig1).doesNotContain(crawlScheduleConfig3, crawlScheduleConfig2, crawlJob1);
@@ -514,7 +497,7 @@ public class RethinkDbConfigAdapterIT {
         assertThat(configAdapter.listConfigObjects(test2.build()).stream())
                 .allSatisfy(r -> {
                     assertThat(r.getMeta().getName()).isEqualTo("pc1");
-                    assertThat(r.getMeta().getDescription()).isEqualTo("desc6");
+                    assertThat(r.getMeta().getDescription()).isEqualTo("pc1desc");
                     assertThat(r.getPolitenessConfig().getCrawlHostGroupSelectorList()).containsOnly("sel1");
                 });
 
@@ -523,7 +506,7 @@ public class RethinkDbConfigAdapterIT {
         assertThat(configAdapter.listConfigObjects(test2.build()).stream())
                 .allSatisfy(r -> {
                     assertThat(r.getMeta().getName()).isEqualTo("pc1");
-                    assertThat(r.getMeta().getDescription()).isEqualTo("desc6");
+                    assertThat(r.getMeta().getDescription()).isEqualTo("pc1desc");
                     assertThat(r.getPolitenessConfig().getCrawlHostGroupSelectorList()).containsOnly("sel1", "sel2");
                 });
 

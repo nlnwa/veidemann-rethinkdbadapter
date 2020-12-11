@@ -18,8 +18,6 @@ package no.nb.nna.veidemann.db;
 
 import com.rethinkdb.RethinkDB;
 import com.rethinkdb.gen.ast.Insert;
-import no.nb.nna.veidemann.api.commons.v1.ExtractedText;
-import no.nb.nna.veidemann.api.config.v1.CrawlScope;
 import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
 import no.nb.nna.veidemann.api.contentwriter.v1.RecordType;
 import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
@@ -98,17 +96,15 @@ public class RethinkDbExecutionsAdapterIT {
         }
     }
 
-    private CrawlExecutionStatus createCrawlExecutionStatus(String jobId, String jobExecutionId, String seedId, CrawlScope scope) throws DbException {
+    private CrawlExecutionStatus createCrawlExecutionStatus(String jobId, String jobExecutionId, String seedId) throws DbException {
         Objects.requireNonNull(jobId, "jobId must be set");
         Objects.requireNonNull(jobExecutionId, "jobExecutionId must be set");
         Objects.requireNonNull(seedId, "seedId must be set");
-        Objects.requireNonNull(scope, "crawl scope must be set");
 
         CrawlExecutionStatus status = CrawlExecutionStatus.newBuilder()
                 .setJobId(jobId)
                 .setJobExecutionId(jobExecutionId)
                 .setSeedId(seedId)
-                .setScope(scope)
                 .setState(CrawlExecutionStatus.State.CREATED)
                 .build();
 
@@ -122,9 +118,9 @@ public class RethinkDbExecutionsAdapterIT {
 
     @Test
     public void listCrawlExecutionStatus() throws DbException, InterruptedException {
-        CrawlExecutionStatus ces1 = createCrawlExecutionStatus("jobId1", "jobExe1", "seedId1", CrawlScope.getDefaultInstance());
-        CrawlExecutionStatus ces2 = createCrawlExecutionStatus("jobId1", "jobExe1", "seedId2", CrawlScope.getDefaultInstance());
-        CrawlExecutionStatus ces3 = createCrawlExecutionStatus("jobId1", "jobExe2", "seedId1", CrawlScope.getDefaultInstance());
+        CrawlExecutionStatus ces1 = createCrawlExecutionStatus("jobId1", "jobExe1", "seedId1");
+        CrawlExecutionStatus ces2 = createCrawlExecutionStatus("jobId1", "jobExe1", "seedId2");
+        CrawlExecutionStatus ces3 = createCrawlExecutionStatus("jobId1", "jobExe2", "seedId1");
 
         // Check crawl executions list functions
         CrawlExecutionsListRequest.Builder request = CrawlExecutionsListRequest.newBuilder();
@@ -176,7 +172,7 @@ public class RethinkDbExecutionsAdapterIT {
         new Thread(() -> {
             try {
                 Thread.sleep(100);
-                String id = createCrawlExecutionStatus("jobId1", "jobExe2", "seedId3", CrawlScope.getDefaultInstance()).getId();
+                String id = createCrawlExecutionStatus("jobId1", "jobExe2", "seedId3").getId();
                 Thread.sleep(100);
                 executionsAdapter.setCrawlExecutionStateAborted(id, CrawlExecutionStatus.State.ABORTED_MANUAL);
                 Thread.sleep(100);

@@ -1,4 +1,32 @@
 apiVersion: v1
+id: bfde69f5-1e4c-4207-a209-263058b9e41f
+kind: browserScript
+meta:
+  annotation:
+    - key: scope_maxHopsFromSeed
+      value: "0"
+    - key: scope_hopsIncludeRedirects
+      value: "False"
+    - key: scope_excludedUris
+      value: "dummy"
+    - key: scope_includeSubdomains
+      value: "True"
+  description: Default scope check script
+  label:
+    - key: scope
+      value: default
+  name: default-scope.star
+browserScript:
+  browserScriptType: SCOPE_CHECK
+  script: |
+    isSameHost(param("scope_includeSubdomains"), param("scope_hopsIncludeRedirects")).then(Include)
+    maxHopsFromSeed(param("scope_maxHopsFromSeed")).then(TooManyHops).abort()
+    isUrl(param("scope_excludedUris")).then(Blocked).abort()
+  urlRegexp: [ ]
+
+---
+
+apiVersion: v1
 id: 52aeccf3-77d5-4c18-b55f-6561d582a7fb
 browserScript:
   browserScriptType: EXTRACT_OUTLINKS

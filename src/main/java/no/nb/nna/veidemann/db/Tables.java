@@ -19,7 +19,6 @@ public enum Tables {
     CRAWL_LOG("crawl_log", CrawlLog.getDefaultInstance()),
     PAGE_LOG("page_log", PageLog.getDefaultInstance()),
     CRAWLED_CONTENT("crawled_content", CrawledContent.getDefaultInstance()),
-    EXTRACTED_TEXT("extracted_text", ExtractedText.getDefaultInstance()),
     URI_QUEUE("uri_queue", QueuedUri.getDefaultInstance()),
     EXECUTIONS("executions", CrawlExecutionStatus.getDefaultInstance()),
     JOB_EXECUTIONS("job_executions", JobExecutionStatus.getDefaultInstance()),

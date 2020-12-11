@@ -21,7 +21,7 @@ import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlLogOrBuilder;
 
 public class CrawlLogQueryBuilder extends RethinkDbFieldMasksQueryBuilder<CrawlLogOrBuilder> {
-    private final static ObjectPathAccessor OBJ_DEF = new ObjectPathAccessor(CrawlLog.class);
+    private final static ObjectPathAccessor<CrawlLogOrBuilder> OBJ_DEF = new ObjectPathAccessor<>(CrawlLog.class);
 
     public CrawlLogQueryBuilder() {
         super(OBJ_DEF);
@@ -37,6 +37,9 @@ public class CrawlLogQueryBuilder extends RethinkDbFieldMasksQueryBuilder<CrawlL
         addSortable("meta.label", "label");
         addSortable("meta.lastModified", "lastModified");
         addSortable("meta.lastModifiedBy", "lastModifiedBy");
+
+        addPrimaryIndex("warcId", "warcId");
+        addIndex("executionId", "executionId");
 
         addReadOnlyPath("id");
         addReadOnlyPath("apiVersion");

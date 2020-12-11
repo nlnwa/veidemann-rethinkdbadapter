@@ -104,8 +104,8 @@ public class RethinkAstVisualizer {
             String paramIndent = (objIndent + SPACES).substring(0, paramIndentIdx);
             String endParaIndent = (objIndent + SPACES).substring(0, endParaIdx);
 
-            optArgs = String.join("\n" + paramIndent, optArgs.split("\n"));
-            optArgs = " {\n" + paramIndent + optArgs + "\n" + endParaIndent + "}";
+            optArgs = String.join(", ", optArgs.split("\n"));
+            optArgs = " {" + optArgs + "}";
         }
 
         sb.append(indent)

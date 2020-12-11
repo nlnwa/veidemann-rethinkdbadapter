@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 public class CreateNewDb extends TableCreator implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CreateNewDb.class);
 
-    public static final String DB_VERSION = "1.11";
+    public static final String DB_VERSION = "1.12";
 
     public CreateNewDb(String dbName, RethinkDbConnection conn) {
         super(dbName, conn);
@@ -86,6 +86,7 @@ public class CreateNewDb extends TableCreator implements Runnable {
                 r.add(configRefPlural(row, Kind.browserConfig.name(), "scriptRef"))
                         .add(configRefSingular(row, Kind.crawlJob.name(), "scheduleRef"))
                         .add(configRefSingular(row, Kind.crawlJob.name(), "crawlConfigRef"))
+                        .add(configRefSingular(row, Kind.crawlJob.name(), "scopeScriptRef"))
                         .add(configRefSingular(row, Kind.crawlConfig.name(), "collectionRef"))
                         .add(configRefSingular(row, Kind.crawlConfig.name(), "browserConfigRef"))
                         .add(configRefSingular(row, Kind.crawlConfig.name(), "politenessRef"))

@@ -21,7 +21,7 @@ import no.nb.nna.veidemann.api.config.v1.ConfigObject;
 import no.nb.nna.veidemann.api.config.v1.ConfigObjectOrBuilder;
 
 public class ConfigObjectQueryBuilder extends RethinkDbFieldMasksQueryBuilder<ConfigObjectOrBuilder> {
-    private final static ObjectPathAccessor OBJ_DEF = new ObjectPathAccessor(ConfigObject.class);
+    private final static ObjectPathAccessor<ConfigObjectOrBuilder> OBJ_DEF = new ObjectPathAccessor<>(ConfigObject.class);
 
     public ConfigObjectQueryBuilder() {
         super(OBJ_DEF);
@@ -38,8 +38,11 @@ public class ConfigObjectQueryBuilder extends RethinkDbFieldMasksQueryBuilder<Co
         addSortable("meta.lastModified", "lastModified");
         addSortable("meta.lastModifiedBy", "lastModifiedBy");
 
-        addIndex("name", "meta.name");
-        addIndex("label", "meta.label");
+        addPrimaryIndex("id", "id");
+        addIgnoreCaseIndex("name", "meta.name");
+        addIgnoreCaseIndex("label", "meta.label");
+        addIgnoreCaseIndex("kind_label_key", "kind", "meta.label.key");
+        addIgnoreCaseIndex("label_value", "meta.label.value");
         addIndex("lastModified", "meta.lastModified");
         addIndex("lastModifiedBy", "meta.lastModifiedBy");
 
