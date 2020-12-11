@@ -11,7 +11,7 @@ meta:
       value: "dummy"
     - key: scope_includeSubdomains
       value: "True"
-  description: Script which extracts outlinks from <a href> tags
+  description: Default scope check script
   label:
     - key: scope
       value: default
