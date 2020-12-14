@@ -196,7 +196,6 @@ public class QueryOptimizer<T extends MessageOrBuilder> {
                             snippets.remove(s);
                             snippets.remove(s2);
                             first = s;
-                            System.out.println("juhu " + s.chosenIndex + " --> " + s2.chosenIndex);
                             return s2;
                         }
                     }
