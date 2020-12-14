@@ -25,7 +25,6 @@ import no.nb.nna.veidemann.db.fieldmask.ObjectPathAccessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -72,25 +71,14 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
         ListConfigObjectQueryBuilder q = new ListConfigObjectQueryBuilder(request);
 
         Object res = conn.exec("db-listConfigObjects", q.getListQuery());
-        if (res instanceof Cursor) {
-            return new ChangeFeedBase<>((Cursor<Map<String, Object>>) res) {
-                @Override
-                protected Function<Map<String, Object>, ConfigObject> mapper() {
-                    return co -> {
-                        return ProtoUtils.rethinkToProto(co, ConfigObject.class);
-                    };
-                }
-            };
-        } else {
-            return new ChangeFeedBase<>((List<Map<String, Object>>) res) {
-                @Override
-                protected Function<Map<String, Object>, ConfigObject> mapper() {
-                    return co -> {
-                        return ProtoUtils.rethinkToProto(co, ConfigObject.class);
-                    };
-                }
-            };
-        }
+        return new ChangeFeedBase<>(res) {
+            @Override
+            protected Function<Map<String, Object>, ConfigObject> mapper() {
+                return co -> {
+                    return ProtoUtils.rethinkToProto(co, ConfigObject.class);
+                };
+            }
+        };
     }
 
     @Override

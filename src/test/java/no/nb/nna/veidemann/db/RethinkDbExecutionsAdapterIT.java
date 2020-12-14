@@ -166,6 +166,16 @@ public class RethinkDbExecutionsAdapterIT {
                 .hasSize(3)
                 .containsExactlyInAnyOrder(ces1, ces2, ces3);
 
+        request = CrawlExecutionsListRequest.newBuilder()
+                .setOrderByPath("startTime");
+        request.getQueryTemplateBuilder()
+                .setSeedId("seedId1");
+        request.getQueryMaskBuilder().addPaths("seedId");
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(2)
+                .containsExactlyInAnyOrder(ces1, ces3);
+
         // Test watch query
         request = CrawlExecutionsListRequest.newBuilder().setWatch(true);
         ChangeFeed<CrawlExecutionStatus> feed = executionsAdapter.listCrawlExecutionStatus(request.build());

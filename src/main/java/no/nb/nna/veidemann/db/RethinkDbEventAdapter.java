@@ -67,8 +67,7 @@ public class RethinkDbEventAdapter implements EventAdapter {
     public ChangeFeed<EventObject> listEventObjects(no.nb.nna.veidemann.api.eventhandler.v1.ListRequest request) throws DbQueryException, DbConnectionException {
         ListEventObjectQueryBuilder q = new ListEventObjectQueryBuilder(request);
 
-        Cursor<Map<String, Object>> res = conn.exec("db-listEventObjects", q.getListQuery());
-
+        Object res = conn.exec("db-listEventObjects", q.getListQuery());
         return new ChangeFeedBase<EventObject>(res) {
             @Override
             protected Function<Map<String, Object>, EventObject> mapper() {

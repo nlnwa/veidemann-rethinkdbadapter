@@ -38,14 +38,27 @@ import java.util.stream.StreamSupport;
 public abstract class ChangeFeedBase<T> implements ChangeFeed<T> {
     private static final Logger LOG = LoggerFactory.getLogger(ChangeFeedBase.class);
 
-    //    final CursorSpliterator<Map<String, Object>> it;
-    final Spliterator<Map<String, Object>> it;
     final Stream<T> stream;
 
-    public ChangeFeedBase(Cursor<Map<String, Object>> cursor) {
+    /**
+     * Creates a change feed based on a query result from RethinkDB.
+     *
+     * Since RethinkDB returns Cursor or List depending on query, this constructor takes an object which can be either
+     * Cursor<Map<String, Object>> or List<Map<String, Object>>. Everything else will throw a ClassCastException.
+     *
+     * @param cursor the result from RethinkDB to embed.
+     */
+    public ChangeFeedBase(Object cursor) {
+        if(cursor instanceof Cursor) {
+            stream = init((Cursor<Map<String, Object>>) cursor);
+        } else {
+            stream = init((List<Map<String, Object>>) cursor);
+        }
+    }
+
+    private Stream<T> init(Cursor<Map<String, Object>> cursor) {
         CursorSpliterator<Map<String, Object>> it = new CursorSpliterator<>(cursor);
-        this.it = it;
-        this.stream = StreamSupport
+        return StreamSupport
                 .stream(it, false)
                 .onClose(it::close)
                 .map(o -> {
@@ -60,10 +73,9 @@ public abstract class ChangeFeedBase<T> implements ChangeFeed<T> {
                 .distinct();
     }
 
-    public ChangeFeedBase(List<Map<String, Object>> cursor) {
+    private Stream<T> init(List<Map<String, Object>> cursor) {
         Spliterator<Map<String, Object>> it = cursor.spliterator();
-        this.it = it;
-        this.stream = StreamSupport
+        return StreamSupport
                 .stream(it, false)
                 .map(o -> {
                     try {
@@ -86,9 +98,7 @@ public abstract class ChangeFeedBase<T> implements ChangeFeed<T> {
 
     @Override
     public void close() {
-        if (it instanceof CursorSpliterator) {
-            ((CursorSpliterator) it).close();
-        }
+        stream.close();
     }
 
     private static class CursorSpliterator<T extends Map<String, Object>> implements Spliterator<T>, Closeable {
