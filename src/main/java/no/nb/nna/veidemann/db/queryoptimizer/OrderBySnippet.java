@@ -76,6 +76,7 @@ class OrderBySnippet<T extends MessageOrBuilder> extends Snippet<T> {
                 }
                 break;
             case ORDER_BY_INDEX:
+            case BETWEEN_COMPOUND2_INDEX:
                 if (isDescending) {
                     qry = qry.orderBy().optArg("index", r.desc(chosenIndex.indexName));
                 } else {

@@ -158,5 +158,19 @@ class QueryOptimizerForJobExecutionsTest {
         expected = r.table("job_executions").between(r.array("jid1", r.iso8601("2020-12-02T09:53:36.406Z")), r.array("jid1", r.maxval()))
                 .optArg("index", "jobId_startTime").optArg("right_bound", "closed");
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
+
+        // Test list by jobId and order by startTime
+        req = JobExecutionsListRequest.newBuilder()
+                .setOrderByPath("startTime")
+                .setOrderDescending(true)
+                .setPageSize(1);
+        req.getQueryTemplateBuilder()
+                .setJobId("jid2");
+        req.getQueryMaskBuilder().addPaths("jobId");
+        q = new ListJobExecutionQueryBuilder(req.build()).getListQuery();
+        expected = r.table("job_executions").between(r.array("jid2", r.minval()), r.array("jid2", r.maxval()))
+                .optArg("index", "jobId_startTime").optArg("right_bound", "closed")
+                .orderBy().optArg("index", r.desc("jobId_startTime")).skip(0).limit(1);
+        assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
     }
 }
