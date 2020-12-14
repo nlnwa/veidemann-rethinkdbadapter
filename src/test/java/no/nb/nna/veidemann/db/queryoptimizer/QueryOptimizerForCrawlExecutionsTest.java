@@ -164,4 +164,31 @@ class QueryOptimizerForCrawlExecutionsTest {
                 .filter(p1 -> p1.g("startTime").during(r.iso8601("2020-12-02T09:53:36.406Z"), r.maxval()));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
     }
+
+    @Test
+    public void testListBySeedId() throws ParseException {
+        ReqlAst q;
+        ReqlAst expected;
+        CrawlExecutionsListRequest.Builder req;
+
+        // Test list by seed id
+        req = CrawlExecutionsListRequest.newBuilder();
+        req.getQueryTemplateBuilder()
+                .setSeedId("seed1");
+        req.getQueryMaskBuilder().addPaths("seedId");
+        q = new ListCrawlExecutionQueryBuilder(req.build()).getListQuery();
+        expected = r.table("executions").getAll("seed1").optArg("index", "seedId");
+        assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
+
+        // Test list by seed id and order by startTime
+        req = CrawlExecutionsListRequest.newBuilder()
+                .setOrderByPath("startTime");
+        req.getQueryTemplateBuilder()
+                .setSeedId("seed1");
+        req.getQueryMaskBuilder().addPaths("seedId");
+        q = new ListCrawlExecutionQueryBuilder(req.build()).getListQuery();
+        expected = r.table("executions").getAll("seed1").optArg("index", "seedId")
+                .orderBy(p1 -> p1.g("startTime"));
+        assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
+    }
 }

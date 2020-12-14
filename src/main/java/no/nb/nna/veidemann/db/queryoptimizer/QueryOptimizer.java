@@ -152,13 +152,20 @@ public class QueryOptimizer<T extends MessageOrBuilder> {
                                 s2.chosenIndex = i;
                                 s2.renderType = Type.BETWEEN_COMPOUND2_INDEX;
                                 snippets.remove(s2);
-                                // Check if this compound index could be used for sorting as well
-                                for (Snippet<T> s3 : snippets) {
-                                    if (s3.getClass() == OrderBySnippet.class && s3.isAmongBestIndexes(i)) {
-                                        s3.chosenIndex = i;
-                                        s2.linkNext(s3);
-                                        snippets.remove(s3);
-                                        return s3;
+
+                                // If second part is an order by, set values
+                                if (s2.getClass() == OrderBySnippet.class) {
+                                    s2.values.add(r.minval());
+                                    s2.values.add(r.maxval());
+                                } else {
+                                    // Check if this compound index could be used for sorting as well
+                                    for (Snippet<T> s3 : snippets) {
+                                        if (s3.getClass() == OrderBySnippet.class && s3.isAmongBestIndexes(i)) {
+                                            s3.chosenIndex = i;
+                                            s2.linkNext(s3);
+                                            snippets.remove(s3);
+                                            return s3;
+                                        }
                                     }
                                 }
                                 return s2;
@@ -281,7 +288,21 @@ public class QueryOptimizer<T extends MessageOrBuilder> {
         if (first == null) {
             return qry;
         }
-        qry = first.render(qry);
+
+        try {
+            qry = first.render(qry);
+        } catch (Throwable t) {
+            List<Snippet<T>> s = new ArrayList<>();
+            Snippet<T> p = first;
+            while (p != null) {
+                s.add(p);
+                p = p.next;
+            }
+            String sn = s.stream().map(i -> i.toString()).collect(Collectors.joining("\n    - "));
+            LOG.error("Error while optimizing: {}\nCaused by optimization for: {}\n  * Resolved snippets:\n    - {}\n  * Query: {}",
+                    queryBuilder.getClass().getSimpleName(), sn, new RethinkAstDecompiler(qry).toString(), t);
+            throw t;
+        }
 
 
         if (LOG.isDebugEnabled()) {

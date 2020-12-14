@@ -20,7 +20,6 @@ import com.google.protobuf.Message;
 import com.rethinkdb.RethinkDB;
 import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Cursor;
-import no.nb.nna.veidemann.api.commons.v1.ExtractedText;
 import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
 import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
@@ -109,8 +108,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     public ChangeFeed<JobExecutionStatus> listJobExecutionStatus(JobExecutionsListRequest jobExecutionsListRequest) throws DbException {
         ListJobExecutionQueryBuilder q = new ListJobExecutionQueryBuilder(jobExecutionsListRequest);
 
-        Cursor<Map<String, Object>> res = conn.exec("db-listJobExecutions", q.getListQuery());
-
+        Object res = conn.exec("db-listJobExecutions", q.getListQuery());
         return new ChangeFeedBase<JobExecutionStatus>(res) {
             @Override
             @SuppressWarnings("unchecked")
@@ -223,8 +221,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     public ChangeFeed<CrawlExecutionStatus> listCrawlExecutionStatus(CrawlExecutionsListRequest crawlExecutionsListRequest) throws DbException {
         ListCrawlExecutionQueryBuilder q = new ListCrawlExecutionQueryBuilder(crawlExecutionsListRequest);
 
-        Cursor<Map<String, Object>> res = conn.exec("db-listCrawlExecutions", q.getListQuery());
-
+        Object res = conn.exec("db-listCrawlExecutions", q.getListQuery());
         return new ChangeFeedBase<CrawlExecutionStatus>(res) {
             @Override
             @SuppressWarnings("unchecked")
@@ -357,8 +354,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     public ChangeFeed<CrawlLog> listCrawlLogs(CrawlLogListRequest crawlLogListRequest) throws DbException {
         ListCrawlLogQueryBuilder q = new ListCrawlLogQueryBuilder(crawlLogListRequest);
 
-        Cursor<Map<String, Object>> res = conn.exec("db-listCrawlLogs", q.getListQuery());
-
+        Object res = conn.exec("db-listCrawlLogs", q.getListQuery());
         return new ChangeFeedBase<CrawlLog>(res) {
             @Override
             @SuppressWarnings("unchecked")
@@ -404,8 +400,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
     public ChangeFeed<PageLog> listPageLogs(PageLogListRequest pageLogListRequest) throws DbException {
         ListPageLogQueryBuilder q = new ListPageLogQueryBuilder(pageLogListRequest);
 
-        Cursor<Map<String, Object>> res = conn.exec("db-listPageLogs", q.getListQuery());
-
+        Object res = conn.exec("db-listPageLogs", q.getListQuery());
         return new ChangeFeedBase<PageLog>(res) {
             @Override
             @SuppressWarnings("unchecked")

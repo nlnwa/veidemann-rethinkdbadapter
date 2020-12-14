@@ -101,7 +101,12 @@ class GetAllSnippet<T extends MessageOrBuilder> extends Snippet<T> {
                     qry = qry.between(r.array(values.get(0), r.minval()), r.array(values.get(0), r.maxval()))
                             .optArg("right_bound", "closed").optArg("index", chosenIndex.indexName).distinct();
                 }
-                return next.renderNext(qry);
+                if (next.getClass() == OrderBySnippet.class) {
+                    return renderNext(qry);
+                } else {
+                    // If next is not an orderBy snippet, then the necessary code for rendering is already done, skip to next's next.
+                    return next.renderNext(qry);
+                }
             case BETWEEN_INDEX:
                 if (hasNext() && chosenIndex.indexName.equals("kind_label_key") && next.getClass() == LabelSnippet.class) {
                     Object labelKeyStartSpan = ((LabelSnippet<T>) next).getKeyStartSpan();
