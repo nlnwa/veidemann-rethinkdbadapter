@@ -19,8 +19,8 @@ meta:
 browserScript:
   browserScriptType: SCOPE_CHECK
   script: |
-    isSameHost(param("scope_includeSubdomains"), param("scope_hopsIncludeRedirects")).then(Include)
-    maxHopsFromSeed(param("scope_maxHopsFromSeed")).then(TooManyHops).abort()
+    isSameHost(param("scope_includeSubdomains")).then(Include)
+    maxHopsFromSeed(param("scope_maxHopsFromSeed"),param("scope_hopsIncludeRedirects")).then(TooManyHops).abort()
     isUrl(param("scope_excludedUris")).then(Blocked).abort()
   urlRegexp: [ ]
 
