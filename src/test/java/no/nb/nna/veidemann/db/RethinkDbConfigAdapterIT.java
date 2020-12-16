@@ -541,6 +541,19 @@ public class RethinkDbConfigAdapterIT {
                     assertThat(r.getCrawlScheduleConfig().hasValidFrom()).isFalse();
                     assertThat(r.getCrawlScheduleConfig().hasValidTo()).isFalse();
                 });
+
+        UpdateRequest.Builder ur6 = UpdateRequest.newBuilder();
+        ur6.getListRequestBuilder()
+                .setKind(crawlJob)
+                .addId(crawlJob1.getId())
+                .addId(crawlJob2.getId());
+        ur6.getUpdateMaskBuilder()
+                .addPaths("crawlJob.limits.maxBytes");
+        ur6.getUpdateTemplateBuilder()
+                .setKind(crawlJob)
+                .getCrawlJobBuilder().getLimitsBuilder().setMaxBytes(420);
+
+        assertThat(configAdapter.updateConfigObjects(ur6.build()).getUpdated()).isEqualTo(2);
     }
 
     @Test
