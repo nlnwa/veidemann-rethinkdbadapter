@@ -589,6 +589,21 @@ public class RethinkDbConfigAdapterIT {
         ListRequest lr = ListRequest.newBuilder().setKind(seed).build();
         assertThat(configAdapter.listConfigObjects(lr).stream()).containsExactly(saved);
 
+        // Test list
+        ListRequest.Builder req = ListRequest.newBuilder()
+                .setKind(seed);
+        req.getQueryTemplateBuilder()
+                .getSeedBuilder().addJobRef(ApiTools.refForConfig(crawlJob1));
+        req.getQueryMaskBuilder().addPaths("seed.jobRef");
+
+        assertThat(configAdapter.listConfigObjects(req.build()).stream())
+                .hasSize(1)
+                .allSatisfy(s -> {
+                    assertThat(s.getApiVersion()).isEqualTo("v1");
+                    assertThat(s.getKind()).isEqualTo(seed);
+                    assertThat(s.getId()).isEqualTo(saved.getId());
+                });
+
         // Test update
         UpdateRequest ur = UpdateRequest.newBuilder().setListRequest(lr)
                 .setUpdateTemplate(ConfigObject.getDefaultInstance()).build();
