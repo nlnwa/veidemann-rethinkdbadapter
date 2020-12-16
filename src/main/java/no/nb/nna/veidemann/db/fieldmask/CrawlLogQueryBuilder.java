@@ -33,11 +33,6 @@ public class CrawlLogQueryBuilder extends RethinkDbFieldMasksQueryBuilder<CrawlL
 
     @Override
     protected void init() {
-        addSortable("meta.name", "name");
-        addSortable("meta.label", "label");
-        addSortable("meta.lastModified", "lastModified");
-        addSortable("meta.lastModifiedBy", "lastModifiedBy");
-
         addPrimaryIndex("warcId", "warcId");
         addIndex("executionId", "executionId");
 

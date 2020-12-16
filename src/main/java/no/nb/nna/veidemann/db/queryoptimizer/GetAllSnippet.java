@@ -3,11 +3,13 @@ package no.nb.nna.veidemann.db.queryoptimizer;
 import com.google.protobuf.MessageOrBuilder;
 import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.Table;
+import com.rethinkdb.model.MapObject;
 import no.nb.nna.veidemann.db.ProtoUtils;
 import no.nb.nna.veidemann.db.fieldmask.Indexes.Index;
 import no.nb.nna.veidemann.db.fieldmask.RethinkDbFieldMasksQueryBuilder;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.rethinkdb.RethinkDB.r;
 
@@ -78,6 +80,11 @@ class GetAllSnippet<T extends MessageOrBuilder> extends Snippet<T> {
                 qry = ((Table) qry).getAll(values.toArray());
                 break;
             case GET_ALL_INDEX:
+                if ("configRefs".equals(chosenIndex.indexName)) {
+                    values = values.stream()
+                            .map(c -> r.array(((MapObject) c).get("kind"), ((MapObject) c).get("id")))
+                            .collect(Collectors.toList());
+                }
                 qry = ((Table) qry).getAll(values.toArray()).optArg("index", chosenIndex.indexName);
                 break;
             case FILTER:
@@ -130,10 +137,18 @@ class GetAllSnippet<T extends MessageOrBuilder> extends Snippet<T> {
     }
 
     ReqlExpr asFilter(ReqlExpr row) {
-        if (values.size() == 1) {
-            return r.expr(values.get(0)).eq(queryBuilder.buildGetFieldExpression(pathDef, row));
+        if (pathDef.getDescriptor().isRepeated()) {
+            if (values.size() == 1) {
+                return queryBuilder.buildGetFieldExpression(pathDef, row).contains(r.expr(values.get(0)));
+            } else {
+                return queryBuilder.buildGetFieldExpression(pathDef, row).coerceTo("array").contains(r.args(values));
+            }
         } else {
-            return queryBuilder.buildGetFieldExpression(pathDef, row).coerceTo("array").contains(r.args(values));
+            if (values.size() == 1) {
+                return r.expr(values.get(0)).eq(queryBuilder.buildGetFieldExpression(pathDef, row));
+            } else {
+                return queryBuilder.buildGetFieldExpression(pathDef, row).coerceTo("array").contains(r.args(values));
+            }
         }
     }
 }

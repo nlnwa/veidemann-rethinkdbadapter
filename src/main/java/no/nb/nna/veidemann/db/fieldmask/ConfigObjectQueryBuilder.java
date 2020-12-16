@@ -33,11 +33,6 @@ public class ConfigObjectQueryBuilder extends RethinkDbFieldMasksQueryBuilder<Co
 
     @Override
     protected void init() {
-        addSortable("meta.name", "name");
-        addSortable("meta.label", "label");
-        addSortable("meta.lastModified", "lastModified");
-        addSortable("meta.lastModifiedBy", "lastModifiedBy");
-
         addPrimaryIndex("id", "id");
         addIgnoreCaseIndex("name", "meta.name");
         addIgnoreCaseIndex("label", "meta.label");
@@ -45,6 +40,15 @@ public class ConfigObjectQueryBuilder extends RethinkDbFieldMasksQueryBuilder<Co
         addIgnoreCaseIndex("label_value", "meta.label.value");
         addIndex("lastModified", "meta.lastModified");
         addIndex("lastModifiedBy", "meta.lastModifiedBy");
+        addIndex("configRefs", "seed.jobRef");
+        addIndex("configRefs", "seed.entityRef");
+        addIndex("configRefs", "browserConfig.scriptRef");
+        addIndex("configRefs", "crawlJob.scheduleRef");
+        addIndex("configRefs", "crawlJob.crawlConfigRef");
+        addIndex("configRefs", "crawlJob.scopeScriptRef");
+        addIndex("configRefs", "crawlConfig.collectionRef");
+        addIndex("configRefs", "crawlConfig.browserConfigRef");
+        addIndex("configRefs", "crawlConfig.politenessRef");
 
         addReadOnlyPath("id");
         addReadOnlyPath("apiVersion");
