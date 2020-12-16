@@ -33,10 +33,6 @@ public class JobExecutionQueryBuilder extends RethinkDbFieldMasksQueryBuilder<Jo
 
     @Override
     protected void init() {
-        addSortable("startTime", "startTime");
-        addSortable("jobId", "jobId");
-        addSortable("state", "state");
-
         addPrimaryIndex("id", "id");
         addIndex("startTime", "startTime");
         addIndex("jobId", "jobId");

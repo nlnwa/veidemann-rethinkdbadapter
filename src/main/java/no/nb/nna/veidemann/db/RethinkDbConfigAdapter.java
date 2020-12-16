@@ -97,7 +97,7 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
 
     @Override
     public UpdateResponse updateConfigObjects(UpdateRequest request) throws DbQueryException, DbConnectionException {
-        checkConfigRefKind(request.getUpdateTemplate());
+        checkConfigRefKind(request.getUpdateTemplate(), true);
 
         UpdateConfigObjectQueryBuilder q = new UpdateConfigObjectQueryBuilder(request);
 
@@ -221,7 +221,7 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
     private ConfigObject storeConfigObject(ConfigObject msg) throws DbException {
         final Tables table = getTableForKind(msg.getKind());
 
-        checkConfigRefKind(msg);
+        checkConfigRefKind(msg, false);
 
         FieldDescriptor metaField = msg.getDescriptorForType().findFieldByName("meta");
         @SuppressWarnings("unchecked")
@@ -305,30 +305,38 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
         }
     }
 
-    void checkConfigRefKind(ConfigObject object) throws DbQueryException, DbConnectionException {
+    /**
+     * Ensure all configRefs has correct kind and ref exists.
+     *
+     * @param object object to test
+     * @param update if true, this is a partial update and required configRefs are not checked for existence
+     * @throws DbQueryException
+     * @throws DbConnectionException
+     */
+    void checkConfigRefKind(ConfigObject object, boolean update) throws DbQueryException, DbConnectionException {
         switch (object.getKind()) {
             case crawlEntity:
                 break;
             case seed:
-                checkConfigRefKind("entityRef", object.getSeed().getEntityRef(), Kind.crawlEntity, true);
+                checkConfigRefKind("entityRef", object.getSeed().getEntityRef(), Kind.crawlEntity, true, update);
                 for (ConfigRef cr : object.getSeed().getJobRefList()) {
-                    checkConfigRefKind("jobRef", cr, Kind.crawlJob, true);
+                    checkConfigRefKind("jobRef", cr, Kind.crawlJob, true, update);
                 }
                 break;
             case crawlJob:
-                checkConfigRefKind("scheduleRef", object.getCrawlJob().getScheduleRef(), Kind.crawlScheduleConfig, false);
-                checkConfigRefKind("crawlConfigRef", object.getCrawlJob().getCrawlConfigRef(), Kind.crawlConfig, true);
-                checkConfigRefKind("scopeScriptRef", object.getCrawlJob().getScopeScriptRef(), Kind.browserScript, true);
+                checkConfigRefKind("scheduleRef", object.getCrawlJob().getScheduleRef(), Kind.crawlScheduleConfig, false, update);
+                checkConfigRefKind("crawlConfigRef", object.getCrawlJob().getCrawlConfigRef(), Kind.crawlConfig, true, update);
+                checkConfigRefKind("scopeScriptRef", object.getCrawlJob().getScopeScriptRef(), Kind.browserScript, true, update);
                 break;
             case crawlConfig:
-                checkConfigRefKind("collectionRef", object.getCrawlConfig().getCollectionRef(), Kind.collection, true);
-                checkConfigRefKind("browserConfigRef", object.getCrawlConfig().getBrowserConfigRef(), Kind.browserConfig, true);
-                checkConfigRefKind("politenessRef", object.getCrawlConfig().getPolitenessRef(), Kind.politenessConfig, true);
+                checkConfigRefKind("collectionRef", object.getCrawlConfig().getCollectionRef(), Kind.collection, true, update);
+                checkConfigRefKind("browserConfigRef", object.getCrawlConfig().getBrowserConfigRef(), Kind.browserConfig, true, update);
+                checkConfigRefKind("politenessRef", object.getCrawlConfig().getPolitenessRef(), Kind.politenessConfig, true, update);
             case crawlScheduleConfig:
                 break;
             case browserConfig:
                 for (ConfigRef cr : object.getBrowserConfig().getScriptRefList()) {
-                    checkConfigRefKind("scriptRef", cr, Kind.browserScript, true);
+                    checkConfigRefKind("scriptRef", cr, Kind.browserScript, true, update);
                 }
                 break;
             case politenessConfig:
@@ -345,10 +353,10 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
 
     }
 
-    private void checkConfigRefKind(String fieldName, ConfigRef configRef, Kind expectedKind, boolean mustBePresent)
+    private void checkConfigRefKind(String fieldName, ConfigRef configRef, Kind expectedKind, boolean mustBePresent, boolean update)
             throws DbQueryException, DbConnectionException {
         if (configRef == ConfigRef.getDefaultInstance()) {
-            if (mustBePresent) {
+            if (mustBePresent && !update) {
                 throw new IllegalArgumentException("Reference missing. The field '" + fieldName + "' must have a reference of kind '" + expectedKind + "'");
             }
             return;

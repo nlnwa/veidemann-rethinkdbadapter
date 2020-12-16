@@ -29,21 +29,6 @@ import static com.rethinkdb.RethinkDB.r;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class ConfigObjectQueryBuilderTest {
-
-    @Test
-    public void getSortIndexForPath() {
-        FieldMask m = FieldMask.newBuilder()
-                .addPaths("meta.name")
-                .addPaths("crawlConfig.extra.createScreenshot")
-                .addPaths("meta")
-                .addPaths("crawlConfig.priorityWeight")
-                .build();
-
-        ConfigObjectQueryBuilder queryBuilder = new ConfigObjectQueryBuilder(m);
-        assertThat(queryBuilder.getSortIndexForPath("meta.name")).isEqualTo("name");
-        assertThat(queryBuilder.getSortIndexForPath("meta.foo")).isNull();
-    }
-
     @Test
     public void createPluckQuery() {
         FieldMask m = FieldMask.newBuilder()

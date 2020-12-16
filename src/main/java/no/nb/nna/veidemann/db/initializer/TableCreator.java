@@ -133,7 +133,7 @@ public class TableCreator {
     Branch configRefPlural(ReqlExpr row, String kind, String field) {
         return r.branch(
                 row.hasFields(kind).and(row.g(kind).hasFields(field)),
-                r.array(row.g(kind).g(field).map(d -> r.array(d.g("kind"), d.g("id")))),
+                row.g(kind).g(field).map(d -> r.array(d.g("kind"), d.g("id"))),
                 r.array());
     }
 

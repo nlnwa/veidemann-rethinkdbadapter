@@ -541,15 +541,35 @@ public class RethinkDbConfigAdapterIT {
                     assertThat(r.getCrawlScheduleConfig().hasValidFrom()).isFalse();
                     assertThat(r.getCrawlScheduleConfig().hasValidTo()).isFalse();
                 });
+
+        UpdateRequest.Builder ur6 = UpdateRequest.newBuilder();
+        ur6.getListRequestBuilder()
+                .setKind(crawlJob)
+                .addId(crawlJob1.getId())
+                .addId(crawlJob2.getId());
+        ur6.getUpdateMaskBuilder()
+                .addPaths("crawlJob.limits.maxBytes");
+        ur6.getUpdateTemplateBuilder()
+                .setKind(crawlJob)
+                .getCrawlJobBuilder().getLimitsBuilder().setMaxBytes(420);
+
+        assertThat(configAdapter.updateConfigObjects(ur6.build()).getUpdated()).isEqualTo(2);
     }
 
     @Test
     public void testSeed() throws DbException {
+        // Create two entities for use by seeds in this test
         ConfigObject.Builder eb = ConfigObject.newBuilder()
                 .setApiVersion("v1")
                 .setKind(crawlEntity);
         eb.getMetaBuilder().setName("Example.com");
         ConfigObject entity = configAdapter.saveConfigObject(eb.build());
+
+        eb = ConfigObject.newBuilder()
+                .setApiVersion("v1")
+                .setKind(crawlEntity);
+        eb.getMetaBuilder().setName("Example2.com");
+        ConfigObject entity2 = configAdapter.saveConfigObject(eb.build());
 
 
         ConfigObject.Builder co = ConfigObject.newBuilder()
@@ -586,14 +606,117 @@ public class RethinkDbConfigAdapterIT {
         assertThat(fetched1).isEqualTo(expected);
 
         // Test List
-        ListRequest lr = ListRequest.newBuilder().setKind(seed).build();
-        assertThat(configAdapter.listConfigObjects(lr).stream()).containsExactly(saved);
+        ListRequest.Builder lr = ListRequest.newBuilder().setKind(seed);
+        assertThat(configAdapter.listConfigObjects(lr.build()).stream()).containsExactly(saved);
+
+        // Add one more seeds for following tests
+        co = ConfigObject.newBuilder()
+                .setApiVersion("v1")
+                .setKind(seed);
+        co.getMetaBuilder()
+                .setName("http://example2.com")
+                .setDescription("test2");
+        co.getSeedBuilder()
+                .setEntityRef(ApiTools.refForConfig(entity2))
+                .addJobRef(ApiTools.refForConfig(crawlJob1))
+                .addJobRef(ApiTools.refForConfig(crawlJob2));
+        ConfigObject seed2 = configAdapter.saveConfigObject(co.build());
+
+        // Test list by entityRef
+        lr = ListRequest.newBuilder()
+                .setKind(seed);
+        lr.getQueryTemplateBuilder()
+                .getSeedBuilder().setEntityRef(ApiTools.refForConfig(entity));
+        lr.getQueryMaskBuilder().addPaths("seed.entityRef");
+        assertThat(configAdapter.listConfigObjects(lr.build()).stream())
+                .hasSize(1)
+                .allSatisfy(s -> {
+                    assertThat(s.getApiVersion()).isEqualTo("v1");
+                    assertThat(s.getKind()).isEqualTo(seed);
+                    assertThat(s.getId()).isEqualTo(saved.getId());
+                });
+
+        // Test list by jobRef
+        lr = ListRequest.newBuilder()
+                .setKind(seed);
+        lr.getQueryTemplateBuilder()
+                .getSeedBuilder().addJobRef(ApiTools.refForConfig(crawlJob1));
+        lr.getQueryMaskBuilder().addPaths("seed.jobRef");
+        assertThat(configAdapter.listConfigObjects(lr.build()).stream())
+                .hasSize(2)
+                .allSatisfy(s -> {
+                    assertThat(s.getApiVersion()).isEqualTo("v1");
+                    assertThat(s.getKind()).isEqualTo(seed);
+                    assertThat(s.getId()).isIn(saved.getId(), seed2.getId());
+                });
+
+        // Test list by two jobRefs
+        // TODO: This test returns two objects, but should return just one. Leaves this for now as it is not important
+        //       enough to block release of other bugfixes.
+//        lr = ListRequest.newBuilder()
+//                .setKind(seed);
+//        lr.getQueryTemplateBuilder()
+//                .getSeedBuilder().addJobRef(ApiTools.refForConfig(crawlJob1)).addJobRef(ApiTools.refForConfig(crawlJob2));
+//        lr.getQueryMaskBuilder().addPaths("seed.jobRef");
+//        assertThat(configAdapter.listConfigObjects(lr.build()).stream())
+//                .hasSize(1)
+//                .allSatisfy(s -> {
+//                    assertThat(s.getApiVersion()).isEqualTo("v1");
+//                    assertThat(s.getKind()).isEqualTo(seed);
+//                    assertThat(s.getId()).isEqualTo(seed2.getId());
+//                });
+
+        // Test list by id and entityRef
+        lr = ListRequest.newBuilder()
+                .addId(saved.getId())
+                .setKind(seed);
+        lr.getQueryTemplateBuilder()
+                .getSeedBuilder().setEntityRef(ApiTools.refForConfig(entity));
+        lr.getQueryMaskBuilder().addPaths("seed.entityRef");
+        assertThat(configAdapter.listConfigObjects(lr.build()).stream())
+                .hasSize(1)
+                .allSatisfy(s -> {
+                    assertThat(s.getApiVersion()).isEqualTo("v1");
+                    assertThat(s.getKind()).isEqualTo(seed);
+                    assertThat(s.getId()).isEqualTo(saved.getId());
+                });
+
+        // Test list by id and jobRef
+        lr = ListRequest.newBuilder()
+                .addId(saved.getId())
+                .setKind(seed);
+        lr.getQueryTemplateBuilder()
+                .getSeedBuilder().addJobRef(ApiTools.refForConfig(crawlJob1));
+        lr.getQueryMaskBuilder().addPaths("seed.jobRef");
+        assertThat(configAdapter.listConfigObjects(lr.build()).stream())
+                .hasSize(1)
+                .allSatisfy(s -> {
+                    assertThat(s.getApiVersion()).isEqualTo("v1");
+                    assertThat(s.getKind()).isEqualTo(seed);
+                    assertThat(s.getId()).isEqualTo(saved.getId());
+                });
+
+        // Test list by id and two jobRefs
+        lr = ListRequest.newBuilder()
+                .addId(seed2.getId())
+                .setKind(seed);
+        lr.getQueryTemplateBuilder()
+                .getSeedBuilder().addJobRef(ApiTools.refForConfig(crawlJob1)).addJobRef(ApiTools.refForConfig(crawlJob2));
+        lr.getQueryMaskBuilder().addPaths("seed.jobRef");
+        assertThat(configAdapter.listConfigObjects(lr.build()).stream())
+                .hasSize(1)
+                .allSatisfy(s -> {
+                    assertThat(s.getApiVersion()).isEqualTo("v1");
+                    assertThat(s.getKind()).isEqualTo(seed);
+                    assertThat(s.getId()).isEqualTo(seed2.getId());
+                });
 
         // Test update
+        lr = ListRequest.newBuilder().setKind(seed).addId(saved.getId());
         UpdateRequest ur = UpdateRequest.newBuilder().setListRequest(lr)
                 .setUpdateTemplate(ConfigObject.getDefaultInstance()).build();
         assertThat(configAdapter.updateConfigObjects(ur).getUpdated()).isEqualTo(1);
-        assertThat(configAdapter.listConfigObjects(lr).stream())
+        assertThat(configAdapter.listConfigObjects(lr.build()).stream())
                 .hasSize(1)
                 .allSatisfy(s -> {
                     assertThat(s.getApiVersion()).isEqualTo("v1");

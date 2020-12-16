@@ -29,14 +29,12 @@ import no.nb.nna.veidemann.db.fieldmask.MaskedObject.UpdateType;
 import no.nb.nna.veidemann.db.queryoptimizer.QueryOptimizer;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static com.rethinkdb.RethinkDB.r;
 
 public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder> {
-    private Map<String, String> sortables = new HashMap<>();
     private Indexes indexes = new Indexes();
     private List<String> readOnlyPaths = new ArrayList<>();
     private List<String> minimumReturnedFields = new ArrayList<>();
@@ -48,10 +46,6 @@ public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder
     }
 
     protected abstract void init();
-
-    protected void addSortable(String path, String indexName) {
-        sortables.put(path, indexName);
-    }
 
     protected void addIndex(String indexName, String... path) {
         indexes.addIndex(indexName, path);
@@ -91,10 +85,6 @@ public abstract class RethinkDbFieldMasksQueryBuilder<T extends MessageOrBuilder
 
     protected void addMinimumReturnedField(String path) {
         minimumReturnedFields.add(path);
-    }
-
-    public String getSortIndexForPath(String path) {
-        return sortables.get(path);
     }
 
     public ReqlExpr createOrderByQuery(ReqlExpr q, String fieldName, String indexName, boolean descending) {
