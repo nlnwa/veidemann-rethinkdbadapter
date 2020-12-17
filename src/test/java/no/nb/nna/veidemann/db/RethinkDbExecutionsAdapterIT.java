@@ -248,6 +248,10 @@ public class RethinkDbExecutionsAdapterIT {
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).addState(State.RUNNING).build());
         assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
 
+        jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).addState(State.RUNNING)
+                .setOrderByPath("state").build());
+        assertThat(jList.stream()).hasSize(2).containsExactly(jes2, jes1);
+
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().setStartTimeFrom(ProtoUtils.getNowTs()).build());
         assertThat(jList.stream()).hasSize(0);
 

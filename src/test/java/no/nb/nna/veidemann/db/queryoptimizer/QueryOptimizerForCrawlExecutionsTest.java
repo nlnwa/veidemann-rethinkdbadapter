@@ -78,6 +78,16 @@ class QueryOptimizerForCrawlExecutionsTest {
         q = new ListCrawlExecutionQueryBuilder(req.build()).getListQuery();
         expected = r.table("executions").getAll("id2").filter(p1 -> p1.g("state").eq("CREATED"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
+
+        // Test list by state and order by state
+        req = CrawlExecutionsListRequest.newBuilder()
+                .addState(State.CREATED)
+                .setOrderByPath("state");
+        q = new ListCrawlExecutionQueryBuilder(req.build()).getListQuery();
+        expected = r.table("executions").between("CREATED", "CREATED")
+                .optArg("index", "state").optArg("right_bound", "closed")
+                .orderBy().optArg("index", "state");
+        assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
     }
 
     @Test

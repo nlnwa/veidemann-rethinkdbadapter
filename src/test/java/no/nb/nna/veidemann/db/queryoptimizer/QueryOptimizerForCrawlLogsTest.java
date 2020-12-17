@@ -70,7 +70,7 @@ class QueryOptimizerForCrawlLogsTest {
         req.getQueryMaskBuilder().addPaths("executionId");
         q = new ListCrawlLogQueryBuilder(req.build()).getListQuery();
         expected = r.table("crawl_log").between("eid1", "eid1").optArg("index", "executionId")
-                .optArg("right_bound", "closed").distinct()
+                .optArg("right_bound", "closed")
                 .orderBy().optArg("index", "executionId");
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 

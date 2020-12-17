@@ -103,10 +103,10 @@ class GetAllSnippet<T extends MessageOrBuilder> extends Snippet<T> {
                             .optArg("right_bound", "closed").optArg("index", chosenIndex.indexName);
                 } else if (values.size() == 1) {
                     qry = qry.between(r.array(values.get(0), r.minval()), r.array(values.get(0), r.maxval()))
-                            .optArg("right_bound", "closed").optArg("index", chosenIndex.indexName).distinct();
+                            .optArg("right_bound", "closed").optArg("index", chosenIndex.indexName);
                 } else {
-                    qry = qry.between(r.array(values.get(0), r.minval()), r.array(values.get(0), r.maxval()))
-                            .optArg("right_bound", "closed").optArg("index", chosenIndex.indexName).distinct();
+                    qry = qry.between(r.array(values.get(0), r.minval()), r.array(values.get(1), r.maxval()))
+                            .optArg("right_bound", "closed").optArg("index", chosenIndex.indexName);
                 }
                 if (next.getClass() == OrderBySnippet.class) {
                     return renderNext(qry);
@@ -123,10 +123,10 @@ class GetAllSnippet<T extends MessageOrBuilder> extends Snippet<T> {
                 } else {
                     if (values.size() == 1) {
                         qry = qry.between(values.get(0), values.get(0))
-                                .optArg("right_bound", "closed").optArg("index", chosenIndex.indexName).distinct();
+                                .optArg("right_bound", "closed").optArg("index", chosenIndex.indexName);
                     } else {
                         qry = qry.between(values.get(0), values.get(1))
-                                .optArg("right_bound", "closed").optArg("index", chosenIndex.indexName).distinct();
+                                .optArg("right_bound", "closed").optArg("index", chosenIndex.indexName);
                     }
                 }
                 break;
