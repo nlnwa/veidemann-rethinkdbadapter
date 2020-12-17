@@ -69,7 +69,7 @@ class QueryOptimizerForPageLogsTest {
         req.getQueryMaskBuilder().addPaths("executionId");
         q = new ListPageLogQueryBuilder(req.build()).getListQuery();
         expected = r.table("page_log").between("eid1", "eid1").optArg("index", "executionId")
-                .optArg("right_bound", "closed").distinct().orderBy().optArg("index", "executionId");
+                .optArg("right_bound", "closed").orderBy().optArg("index", "executionId");
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         // Test list by CrawlExecutionId with order by JobExecutionId

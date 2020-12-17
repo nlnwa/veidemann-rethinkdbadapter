@@ -73,6 +73,26 @@ class QueryOptimizerForJobExecutionsTest {
         q = new ListJobExecutionQueryBuilder(req.build()).getListQuery();
         expected = r.table("job_executions").getAll("id2").filter(p1 -> p1.g("state").eq("CREATED"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
+
+        // Test list by state and order by state
+        req = JobExecutionsListRequest.newBuilder()
+                .addState(State.RUNNING)
+                .setOrderByPath("state");
+        q = new ListJobExecutionQueryBuilder(req.build()).getListQuery();
+        expected = r.table("job_executions")
+                .between("RUNNING", "RUNNING").optArg("index", "state").optArg("right_bound", "closed")
+                .orderBy().optArg("index", "state");
+        assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
+
+        // Test list by two states and order by state
+        req = JobExecutionsListRequest.newBuilder()
+                .addState(State.CREATED)
+                .addState(State.RUNNING)
+                .setOrderByPath("state");
+        q = new ListJobExecutionQueryBuilder(req.build()).getListQuery();
+        expected = r.table("job_executions").getAll("CREATED", "RUNNING").optArg("index", "state")
+                .orderBy(p1 -> p1.g("state"));
+        assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
     }
 
     @Test
