@@ -79,9 +79,12 @@ class BetweenSnippet<T extends MessageOrBuilder> extends Snippet<T> {
     }
 
     private ReqlExpr asFilter(ReqlExpr qry) {
-        if ((values.get(0) instanceof OffsetDateTime || Minval.class.equals(values.get(1).getClass()))
-                && (values.get(1) instanceof OffsetDateTime || Maxval.class.equals(values.get(1).getClass()))) {
+        if (values.get(0) instanceof OffsetDateTime && values.get(1) instanceof OffsetDateTime) {
             qry = queryBuilder.buildGetFieldExpression(pathDef, qry).during(values.get(0), values.get(1));
+        } else if (values.get(0) instanceof OffsetDateTime && values.get(1) instanceof Maxval) {
+            qry = queryBuilder.buildGetFieldExpression(pathDef, qry).ge(values.get(0));
+        } else if (values.get(0) instanceof Minval && values.get(1) instanceof OffsetDateTime) {
+            qry = queryBuilder.buildGetFieldExpression(pathDef, qry).lt(values.get(1));
         } else {
             qry = queryBuilder.buildGetFieldExpression(pathDef, qry).ge(values.get(0))
                     .and(queryBuilder.buildGetFieldExpression(pathDef, qry).lt(values.get(1)));

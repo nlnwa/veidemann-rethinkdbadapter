@@ -16,8 +16,11 @@
 
 package no.nb.nna.veidemann.db;
 
+import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
 import com.rethinkdb.RethinkDB;
 import com.rethinkdb.gen.ast.Insert;
+import com.rethinkdb.gen.ast.Update;
 import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
 import no.nb.nna.veidemann.api.contentwriter.v1.RecordType;
 import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
@@ -37,6 +40,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.text.ParseException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -116,8 +120,21 @@ public class RethinkDbExecutionsAdapterIT {
         return conn.executeInsert("db-createExecutionStatus", qry, CrawlExecutionStatus.class);
     }
 
+    private CrawlExecutionStatus setStartStatus(CrawlExecutionStatus ces, Timestamp startTime) throws DbException {
+        CrawlExecutionStatus status = ces.toBuilder()
+                .setState(CrawlExecutionStatus.State.SLEEPING)
+                .setStartTime(startTime)
+                .setLastChangeTime(ProtoUtils.getNowTs())
+                .build();
+
+        Map rMap = ProtoUtils.protoToRethink(status);
+
+        Update qry = r.table(Tables.EXECUTIONS.name).get(ces.getId()).update(rMap);
+        return conn.executeUpdate("db-updateExecutionStatus", qry, CrawlExecutionStatus.class);
+    }
+
     @Test
-    public void listCrawlExecutionStatus() throws DbException, InterruptedException {
+    public void listCrawlExecutionStatus() throws DbException, InterruptedException, ParseException {
         CrawlExecutionStatus ces1 = createCrawlExecutionStatus("jobId1", "jobExe1", "seedId1");
         CrawlExecutionStatus ces2 = createCrawlExecutionStatus("jobId1", "jobExe1", "seedId2");
         CrawlExecutionStatus ces3 = createCrawlExecutionStatus("jobId1", "jobExe2", "seedId1");
@@ -175,6 +192,18 @@ public class RethinkDbExecutionsAdapterIT {
         assertThat(eList.stream())
                 .hasSize(2)
                 .containsExactlyInAnyOrder(ces1, ces3);
+
+        ces1 = setStartStatus(ces1, Timestamps.parse("2020-12-03T09:53:36.406Z"));
+        ces3 = setStartStatus(ces3, Timestamps.parse("2020-12-01T09:53:36.406Z"));
+        request = CrawlExecutionsListRequest.newBuilder()
+                .setStartTimeFrom(Timestamps.parse("2020-12-02T09:53:36.406Z"));
+        request.getQueryTemplateBuilder()
+                .setJobId("jobId1");
+        request.getQueryMaskBuilder().addPaths("jobId");
+        eList = executionsAdapter.listCrawlExecutionStatus(request.build());
+        assertThat(eList.stream())
+                .hasSize(1)
+                .containsExactlyInAnyOrder(ces1);
 
         // Test watch query
         request = CrawlExecutionsListRequest.newBuilder().setWatch(true);
