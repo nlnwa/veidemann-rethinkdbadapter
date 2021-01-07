@@ -131,7 +131,7 @@ class QueryOptimizerForJobExecutionsTest {
                 .setStartTimeFrom(Timestamps.parse("2020-12-02T09:53:36.406Z"));
         q = new ListJobExecutionQueryBuilder(req.build()).getListQuery();
         expected = r.table("job_executions").getAll("CREATED").optArg("index", "state")
-                .filter(p1 -> p1.g("startTime").during(r.iso8601("2020-12-02T09:53:36.406Z"), r.maxval()));
+                .filter(p1 -> p1.g("startTime").ge(r.iso8601("2020-12-02T09:53:36.406Z")));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         req = JobExecutionsListRequest.newBuilder()
@@ -139,7 +139,7 @@ class QueryOptimizerForJobExecutionsTest {
                 .addState(State.CREATED);
         q = new ListJobExecutionQueryBuilder(req.build()).getListQuery();
         expected = r.table("job_executions").getAll("CREATED").optArg("index", "state")
-                .filter(p1 -> p1.g("startTime").during(r.iso8601("2020-12-02T09:53:36.406Z"), r.maxval()));
+                .filter(p1 -> p1.g("startTime").ge(r.iso8601("2020-12-02T09:53:36.406Z")));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
     }
 

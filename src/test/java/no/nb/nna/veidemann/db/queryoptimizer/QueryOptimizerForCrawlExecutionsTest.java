@@ -126,7 +126,7 @@ class QueryOptimizerForCrawlExecutionsTest {
                 .setStartTimeFrom(Timestamps.parse("2020-12-02T09:53:36.406Z"));
         q = new ListCrawlExecutionQueryBuilder(req.build()).getListQuery();
         expected = r.table("executions").getAll("CREATED").optArg("index", "state")
-                .filter(p1 -> p1.g("startTime").during(r.iso8601("2020-12-02T09:53:36.406Z"), r.maxval()));
+                .filter(p1 -> p1.g("startTime").ge(r.iso8601("2020-12-02T09:53:36.406Z")));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         req = CrawlExecutionsListRequest.newBuilder()
@@ -134,7 +134,27 @@ class QueryOptimizerForCrawlExecutionsTest {
                 .addState(State.CREATED);
         q = new ListCrawlExecutionQueryBuilder(req.build()).getListQuery();
         expected = r.table("executions").getAll("CREATED").optArg("index", "state")
-                .filter(p1 -> p1.g("startTime").during(r.iso8601("2020-12-02T09:53:36.406Z"), r.maxval()));
+                .filter(p1 -> p1.g("startTime").ge(r.iso8601("2020-12-02T09:53:36.406Z")));
+        assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
+
+        req = CrawlExecutionsListRequest.newBuilder()
+                .setStartTimeFrom(Timestamps.parse("2020-12-02T09:53:36.406Z"));
+        req.getQueryTemplateBuilder()
+                .setJobId("jid1");
+        req.getQueryMaskBuilder().addPaths("jobId");
+        q = new ListCrawlExecutionQueryBuilder(req.build()).getListQuery();
+        expected = r.table("executions").getAll("jid1").optArg("index", "jobId")
+                .filter(p1 -> p1.g("startTime").ge(r.iso8601("2020-12-02T09:53:36.406Z")));
+        assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
+
+        req = CrawlExecutionsListRequest.newBuilder()
+                .setStartTimeTo(Timestamps.parse("2020-12-02T09:53:36.406Z"));
+        req.getQueryTemplateBuilder()
+                .setJobId("jid1");
+        req.getQueryMaskBuilder().addPaths("jobId");
+        q = new ListCrawlExecutionQueryBuilder(req.build()).getListQuery();
+        expected = r.table("executions").getAll("jid1").optArg("index", "jobId")
+                .filter(p1 -> p1.g("startTime").lt(r.iso8601("2020-12-02T09:53:36.406Z")));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
     }
 
@@ -171,7 +191,7 @@ class QueryOptimizerForCrawlExecutionsTest {
         req.getQueryMaskBuilder().addPaths("jobId");
         q = new ListCrawlExecutionQueryBuilder(req.build()).getListQuery();
         expected = r.table("executions").getAll("jid1").optArg("index", "jobId")
-                .filter(p1 -> p1.g("startTime").during(r.iso8601("2020-12-02T09:53:36.406Z"), r.maxval()));
+                .filter(p1 -> p1.g("startTime").ge(r.iso8601("2020-12-02T09:53:36.406Z")));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
     }
 
