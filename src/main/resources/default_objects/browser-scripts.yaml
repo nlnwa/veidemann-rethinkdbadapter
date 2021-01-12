@@ -59,7 +59,11 @@ browserScript:
         return [];
       }
 
-      return compileOutlinks(frame).filter(link => isValid(link)).map(_ => _.href);
+      function distinct(set) {
+        return [...new Set(set)]
+      }
+
+      return distinct(compileOutlinks(frame).filter(link => isValid(link)).map(_ => _.href));
     })(window);
   urlRegexp: []
 kind: browserScript
