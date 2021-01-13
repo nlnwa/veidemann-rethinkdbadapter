@@ -34,6 +34,15 @@ browserScript:
     (function extractOutlinks(frame) {
       const framesDone = new Set();
 
+      function isValid(link) {
+      return (link != null
+            && link.attributes.href.value != ""
+            && link.attributes.href.value != "#"
+            && link.protocol != "tel:"
+            && link.protocol != "mailto:"
+           );
+      }
+
       function compileOutlinks(frame) {
         framesDone.add(frame);
         if (frame && frame.document) {
@@ -50,7 +59,7 @@ browserScript:
         return [];
       }
 
-      return compileOutlinks(frame).map(_ => _.href);
+      return Array.from(new Set(compileOutlinks(frame).filter(isValid).map(_ => _.href)));
     })(window);
   urlRegexp: []
 kind: browserScript
