@@ -36,11 +36,11 @@ browserScript:
 
       function isValid(link) {
       return (link != null
-	      && link.attributes.href.value != ""
-	      && link.attributes.href.value != "#"
-	      && link.protocol != "tel:"
-	      && link.protocol != "mailto:"
-	     );
+            && link.attributes.href.value != ""
+            && link.attributes.href.value != "#"
+            && link.protocol != "tel:"
+            && link.protocol != "mailto:"
+           );
       }
 
       function compileOutlinks(frame) {
