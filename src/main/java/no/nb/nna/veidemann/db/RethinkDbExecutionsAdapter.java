@@ -123,7 +123,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
                         }
                     }
                     JobExecutionStatus jes = ProtoUtils.rethinkToProto(co, JobExecutionStatus.class);
-                    if (!jes.hasEndTime()) {
+                    if (jobExecutionsListRequest.getIdList().size() > 0 && !jes.hasEndTime()) {
                         LOG.debug("JobExecution '{}' is still running. Aggregating stats snapshot", jes.getId());
                         try {
                             Map sums = summarizeJobExecutionStats(jes.getId());
