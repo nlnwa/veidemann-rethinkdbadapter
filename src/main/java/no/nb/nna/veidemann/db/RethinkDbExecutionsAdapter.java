@@ -76,32 +76,10 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
 
     @Override
     public JobExecutionStatus getJobExecutionStatus(String jobExecutionId) throws DbException {
-        JobExecutionStatus jes = ProtoUtils.rethinkToProto(conn.exec("db-getJobExecutionStatus",
+        return ProtoUtils.rethinkToProto(conn.exec("db-getJobExecutionStatus",
                 r.table(Tables.JOB_EXECUTIONS.name)
                         .get(jobExecutionId)
         ), JobExecutionStatus.class);
-
-        if (!jes.hasEndTime()) {
-            LOG.debug("JobExecution '{}' is still running. Aggregating stats snapshot", jobExecutionId);
-            Map sums = summarizeJobExecutionStats(jes.getId());
-
-            JobExecutionStatus.Builder jesBuilder = jes.toBuilder()
-                    .setDocumentsCrawled((long) sums.get("documentsCrawled"))
-                    .setDocumentsDenied((long) sums.get("documentsDenied"))
-                    .setDocumentsFailed((long) sums.get("documentsFailed"))
-                    .setDocumentsOutOfScope((long) sums.get("documentsOutOfScope"))
-                    .setDocumentsRetried((long) sums.get("documentsRetried"))
-                    .setUrisCrawled((long) sums.get("urisCrawled"))
-                    .setBytesCrawled((long) sums.get("bytesCrawled"));
-
-            for (CrawlExecutionStatus.State s : CrawlExecutionStatus.State.values()) {
-                jesBuilder.putExecutionsState(s.name(), ((Long) sums.get(s.name())).intValue());
-            }
-
-            jes = jesBuilder.build();
-        }
-
-        return jes;
     }
 
     @Override
@@ -122,31 +100,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
                             return null;
                         }
                     }
-                    JobExecutionStatus jes = ProtoUtils.rethinkToProto(co, JobExecutionStatus.class);
-                    if (jobExecutionsListRequest.getIdList().size() > 0 && !jes.hasEndTime()) {
-                        LOG.debug("JobExecution '{}' is still running. Aggregating stats snapshot", jes.getId());
-                        try {
-                            Map sums = summarizeJobExecutionStats(jes.getId());
-
-                            JobExecutionStatus.Builder jesBuilder = jes.toBuilder()
-                                    .setDocumentsCrawled((long) sums.get("documentsCrawled"))
-                                    .setDocumentsDenied((long) sums.get("documentsDenied"))
-                                    .setDocumentsFailed((long) sums.get("documentsFailed"))
-                                    .setDocumentsOutOfScope((long) sums.get("documentsOutOfScope"))
-                                    .setDocumentsRetried((long) sums.get("documentsRetried"))
-                                    .setUrisCrawled((long) sums.get("urisCrawled"))
-                                    .setBytesCrawled((long) sums.get("bytesCrawled"));
-
-                            for (CrawlExecutionStatus.State s : CrawlExecutionStatus.State.values()) {
-                                jesBuilder.putExecutionsState(s.name(), ((Long) sums.get(s.name())).intValue());
-                            }
-
-                            jes = jesBuilder.build();
-                        } catch (DbException ex) {
-                            // DB error; skip calculating runtime sum
-                        }
-                    }
-                    return jes;
+                    return ProtoUtils.rethinkToProto(co, JobExecutionStatus.class);
                 };
             }
         };
