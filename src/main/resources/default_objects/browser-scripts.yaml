@@ -38,6 +38,7 @@ browserScript:
       return (link != null
             && link.attributes.href.value != ""
             && link.attributes.href.value != "#"
+            && link.attributes.href.value != "http:/#"
             && link.protocol != "tel:"
             && link.protocol != "mailto:"
            );
