@@ -44,6 +44,21 @@ browserScript:
            );
       }
 
+      function compileSitemaplinks(frame) {
+        // MVP implementation of parsing sitemap-links when discovered by the browser
+        // Note that Veidemann still needs to know where to find the sitemap.
+        var outlinks = new Array();
+        var urls = frame.document.getElementsByTagName('loc');
+
+        for (var i = 0; i < urls.length; i++) {
+          var urlElement = urls[i];
+          try {
+             outlinks.push(urlElement.textContent);
+           } catch {}
+        }
+        return outlinks
+      }
+
       function compileOutlinks(frame) {
         framesDone.add(frame);
         if (frame && frame.document) {
@@ -59,6 +74,12 @@ browserScript:
         }
         return [];
       }
+
+      /* Sitemaps */
+      if (frame.document.contentType = "text/xml" &&
+          frame.document.location.pathname.includes("sitemap")) {
+        return [compileSitemaplinks(frame)];
+      };
 
       return [...new Set(compileOutlinks(frame).filter(isValid).map(_ => _.href))];
     })(window);
