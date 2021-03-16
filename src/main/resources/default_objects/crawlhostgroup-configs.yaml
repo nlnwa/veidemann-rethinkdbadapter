@@ -1,0 +1,12 @@
+apiVersion: "v1"
+kind: "crawlHostGroupConfig"
+id: "chg-default"
+meta:
+  name: "Default"
+  description: "CrawlHostGroupConfig which is applied on CrawlHostGroups which doesn't match any other config"
+crawlHostGroupConfig:
+  minTimeBetweenPageLoadMs: 5000
+  maxTimeBetweenPageLoadMs: 30000
+  delayFactor: 1
+  maxRetries: 3
+  retryDelaySeconds: 60

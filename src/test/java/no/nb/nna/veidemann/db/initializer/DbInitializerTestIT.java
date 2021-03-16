@@ -91,10 +91,11 @@ public class DbInitializerTestIT {
         assertThat(o.get("browserConfig")).isEqualTo(1L);
         assertThat(o.get("crawlConfig")).isEqualTo(1L);
         assertThat(o.get("crawlScheduleConfig")).isEqualTo(3L);
+        assertThat(o.get("crawlHostGroupConfig")).isEqualTo(1L);
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name))) {
             assertThat(configObjects.iterator()).toIterable()
-                    .hasSize(16)
+                    .hasSize(17)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
                         assertThat(r).containsKey("kind");
@@ -181,10 +182,11 @@ public class DbInitializerTestIT {
         assertThat(o.get("browserConfig")).isEqualTo(1L);
         assertThat(o.get("crawlConfig")).isEqualTo(1L);
         assertThat(o.get("crawlScheduleConfig")).isEqualTo(3L);
+        assertThat(o.get("crawlHostGroupConfig")).isEqualTo(1L);
 
         try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name))) {
             assertThat(configObjects.iterator()).toIterable()
-                    .hasSize(16)
+                    .hasSize(17)
                     .allSatisfy(r -> {
                         assertThat(r.get("apiVersion")).isEqualTo("v1");
                         assertThat(r).containsKey("kind");
@@ -261,6 +263,20 @@ public class DbInitializerTestIT {
                         assertThat(r).containsKey("crawlConfig");
                         assertThat((Map) r.get("crawlConfig")).containsKey("extra");
                         assertThat(((Map<String, Map>) r.get("crawlConfig")).get("extra")).containsEntry("createScreenshot", true);
+                    });
+        }
+
+        // Check default CrawlHostGroup config. Introduced in 1.14
+        try (Cursor<Map> configObjects = conn.exec(r.table(Tables.CONFIG.name)
+                .filter(r.hashMap("kind", "crawlHostGroupConfig")))) {
+            assertThat(configObjects.iterator()).toIterable()
+                    .hasSize(1)
+                    .allSatisfy(r -> {
+                        assertThat(r.get("apiVersion")).isEqualTo("v1");
+                        assertThat(r.get("kind")).isEqualTo("crawlHostGroupConfig");
+                        assertThat(r).containsKey("crawlHostGroupConfig");
+                        assertThat((Map) r.get("crawlHostGroupConfig")).containsKeys("minTimeBetweenPageLoadMs",
+                                "maxTimeBetweenPageLoadMs", "delayFactor", "maxRetries", "retryDelaySeconds");
                     });
         }
 

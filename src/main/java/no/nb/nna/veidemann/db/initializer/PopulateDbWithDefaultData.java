@@ -127,6 +127,17 @@ public class PopulateDbWithDefaultData implements Runnable {
                             }
                         });
             }
+            try (InputStream in = getClass().getClassLoader()
+                    .getResourceAsStream("default_objects/crawlhostgroup-configs.yaml")) {
+                readYamlFile(in, ConfigObject.class)
+                        .forEach(o -> {
+                            try {
+                                db.saveConfigObject(o);
+                            } catch (DbException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+            }
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
