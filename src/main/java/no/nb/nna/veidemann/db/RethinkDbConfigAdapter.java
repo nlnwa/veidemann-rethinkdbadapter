@@ -137,6 +137,10 @@ public class RethinkDbConfigAdapter implements ConfigAdapter {
             case collection:
                 checkDependencies(object, Kind.crawlConfig, "crawlConfig.collectionRef");
                 break;
+            case crawlHostGroupConfig:
+                if (object.getId().equals("chg-default")) {
+                    throw new DbQueryException("Removal of default Crawl Host Group Config not allowed");
+                }
         }
 
         Map<String, Object> response = conn.exec("db-deleteConfigObject",

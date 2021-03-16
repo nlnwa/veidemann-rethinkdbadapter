@@ -259,6 +259,13 @@ public class RethinkDbConfigAdapterIT {
                 .withMessage("Can't delete crawlScheduleConfig, there are 1 crawlJob(s) referring it");
         assertThat(configAdapter.deleteConfigObject(crawlJob2).getDeleted()).isTrue();
         assertThat(configAdapter.deleteConfigObject(crawlScheduleConfig1).getDeleted()).isTrue();
+
+        // Not allowed to delete default CrawlHostGroup config
+        assertThatExceptionOfType(DbQueryException.class)
+                .isThrownBy(() -> configAdapter.deleteConfigObject(ConfigObject.newBuilder()
+                        .setKind(crawlHostGroupConfig)
+                        .setId("chg-default").build()))
+                .withMessage("Removal of default Crawl Host Group Config not allowed");
     }
 
     @Test
@@ -478,36 +485,6 @@ public class RethinkDbConfigAdapterIT {
                     assertThat(r.getMeta().getName()).isEqualTo("cs");
                     assertThat(r.getMeta().getDescription()).isEqualTo("desc");
                     assertThat(r.getCrawlScheduleConfig().getCronExpression()).isEqualTo("newestCron");
-                });
-
-        // Check update of crawlHostGroupSelector for politenessConfig
-        UpdateRequest.Builder ur4 = UpdateRequest.newBuilder();
-        ur4.getListRequestBuilder()
-                .setKind(politenessConfig)
-                .setNameRegex("pc1");
-        ur4.getUpdateTemplateBuilder().getPolitenessConfigBuilder().addCrawlHostGroupSelector("sel1");
-        ur4.getUpdateMaskBuilder()
-                .addPaths("politenessConfig.crawlHostGroupSelector+");
-
-        assertThat(configAdapter.updateConfigObjects(ur4.build()).getUpdated()).isEqualTo(1);
-
-        ListRequest.Builder test2 = ListRequest.newBuilder()
-                .setKind(politenessConfig)
-                .setNameRegex("pc1");
-        assertThat(configAdapter.listConfigObjects(test2.build()).stream())
-                .allSatisfy(r -> {
-                    assertThat(r.getMeta().getName()).isEqualTo("pc1");
-                    assertThat(r.getMeta().getDescription()).isEqualTo("pc1desc");
-                    assertThat(r.getPolitenessConfig().getCrawlHostGroupSelectorList()).containsOnly("sel1");
-                });
-
-        ur4.getUpdateTemplateBuilder().getPolitenessConfigBuilder().clearCrawlHostGroupSelector().addCrawlHostGroupSelector("sel2");
-        assertThat(configAdapter.updateConfigObjects(ur4.build()).getUpdated()).isEqualTo(1);
-        assertThat(configAdapter.listConfigObjects(test2.build()).stream())
-                .allSatisfy(r -> {
-                    assertThat(r.getMeta().getName()).isEqualTo("pc1");
-                    assertThat(r.getMeta().getDescription()).isEqualTo("pc1desc");
-                    assertThat(r.getPolitenessConfig().getCrawlHostGroupSelectorList()).containsOnly("sel1", "sel2");
                 });
 
         // Check removal of object (timestamp)

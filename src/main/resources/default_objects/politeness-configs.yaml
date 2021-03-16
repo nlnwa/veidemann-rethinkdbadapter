@@ -7,8 +7,3 @@ meta:
 politenessConfig:
   robotsPolicy: OBEY_ROBOTS
   minimumRobotsValidityDurationS: 86400
-  minTimeBetweenPageLoadMs: 5000
-  maxTimeBetweenPageLoadMs: 30000
-  delayFactor: 1
-  maxRetries: 3
-  retryDelaySeconds: 60

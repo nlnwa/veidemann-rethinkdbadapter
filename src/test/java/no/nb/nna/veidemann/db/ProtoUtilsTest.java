@@ -19,11 +19,11 @@ import com.google.protobuf.Message;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import no.nb.nna.veidemann.api.config.v1.ConfigObject;
+import no.nb.nna.veidemann.api.config.v1.CrawlHostGroupConfig;
+import no.nb.nna.veidemann.api.config.v1.CrawlHostGroupConfig.IpRange;
 import no.nb.nna.veidemann.api.config.v1.Kind;
 import no.nb.nna.veidemann.api.config.v1.Label;
 import no.nb.nna.veidemann.api.config.v1.Meta;
-import no.nb.nna.veidemann.api.config.v1.PolitenessConfig;
-import no.nb.nna.veidemann.api.config.v1.PolitenessConfig.RobotsPolicy;
 import no.nb.nna.veidemann.api.config.v1.Role;
 import no.nb.nna.veidemann.api.config.v1.RoleMapping;
 import org.junit.Test;
@@ -49,7 +49,7 @@ public class ProtoUtilsTest {
     public void testProtoToRethink() {
         ConfigObject msg = ConfigObject.newBuilder()
                 .setApiVersion("v1")
-                .setKind(Kind.politenessConfig)
+                .setKind(Kind.crawlHostGroupConfig)
                 .setId("UUID")
                 .setMeta(Meta.newBuilder()
                         .setName("Nasjonalbiblioteket")
@@ -60,15 +60,15 @@ public class ProtoUtilsTest {
                                 .setKey("orgType")
                                 .setValue("Government"))
                         .setCreated(ProtoUtils.odtToTs(OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))))
-                .setPolitenessConfig(PolitenessConfig.newBuilder()
+                .setCrawlHostGroupConfig(CrawlHostGroupConfig.newBuilder()
+                        .addIpRange(IpRange.newBuilder().setIpFrom("127.0.0.1").setIpTo("127.0.0.255"))
                         .setDelayFactor(.1f)
-                        .setRobotsPolicy(RobotsPolicy.IGNORE_ROBOTS)
                         .setMaxRetries(5))
                 .build();
 
-        Map politenessConfig = r.hashMap("id", "UUID")
+        Map crawlHostGroupConfig = r.hashMap("id", "UUID")
                 .with("apiVersion", "v1")
-                .with("kind", "politenessConfig")
+                .with("kind", "crawlHostGroupConfig")
                 .with("meta", r.hashMap()
                         .with("name", "Nasjonalbiblioteket")
                         .with("created", OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))
@@ -76,15 +76,15 @@ public class ProtoUtilsTest {
                                 r.hashMap("key", "frequency").with("value", "Daily"),
                                 r.hashMap("key", "orgType").with("value", "Government")))
                 )
-                .with("politenessConfig", r.hashMap()
+                .with("crawlHostGroupConfig", r.hashMap()
+                        .with("ipRange", r.array(r.hashMap("ipFrom", "127.0.0.1").with("ipTo", "127.0.0.255")))
                         .with("delayFactor", .1f)
-                        .with("robotsPolicy", "IGNORE_ROBOTS")
                         .with("maxRetries", 5)
                 );
 
         Map<String, Object> result = ProtoUtils.protoToRethink(msg);
 
-        assertThat(result).isEqualTo(politenessConfig);
+        assertThat(result).isEqualTo(crawlHostGroupConfig);
 
         // Check conversion of object with list of enums
         Map roleMappingRethink = r.hashMap("email", "admin@example.com")
@@ -100,7 +100,7 @@ public class ProtoUtilsTest {
     public void testRethinkToProto_Map_Class() {
         ConfigObject expResult = ConfigObject.newBuilder()
                 .setApiVersion("v1")
-                .setKind(Kind.politenessConfig)
+                .setKind(Kind.crawlHostGroupConfig)
                 .setId("UUID")
                 .setMeta(Meta.newBuilder()
                         .setName("Nasjonalbiblioteket")
@@ -111,15 +111,15 @@ public class ProtoUtilsTest {
                                 .setKey("orgType")
                                 .setValue("Government"))
                         .setCreated(ProtoUtils.odtToTs(OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))))
-                .setPolitenessConfig(PolitenessConfig.newBuilder()
+                .setCrawlHostGroupConfig(CrawlHostGroupConfig.newBuilder()
+                        .addIpRange(IpRange.newBuilder().setIpFrom("127.0.0.1").setIpTo("127.0.0.255"))
                         .setDelayFactor(.1f)
-                        .setRobotsPolicy(RobotsPolicy.IGNORE_ROBOTS)
                         .setMaxRetries(5))
                 .build();
 
-        Map politenessConfig = r.hashMap("id", "UUID")
+        Map crawlHostGroupConfig = r.hashMap("id", "UUID")
                 .with("apiVersion", "v1")
-                .with("kind", "politenessConfig")
+                .with("kind", "crawlHostGroupConfig")
                 .with("meta", r.hashMap()
                         .with("name", "Nasjonalbiblioteket")
                         .with("created", OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))
@@ -127,14 +127,14 @@ public class ProtoUtilsTest {
                                 r.hashMap("key", "frequency").with("value", "Daily"),
                                 r.hashMap("key", "orgType").with("value", "Government")))
                 )
-                .with("politenessConfig", r.hashMap()
+                .with("crawlHostGroupConfig", r.hashMap()
+                        .with("ipRange", r.array(r.hashMap("ipFrom", "127.0.0.1").with("ipTo", "127.0.0.255")))
                         .with("delayFactor", .1f)
-                        .with("robotsPolicy", "IGNORE_ROBOTS")
                         .with("maxRetries", 5)
                 );
 
         ConfigObject result = ProtoUtils
-                .rethinkToProto(politenessConfig, ConfigObject.class);
+                .rethinkToProto(crawlHostGroupConfig, ConfigObject.class);
 
         assertThat(result).isEqualTo(expResult);
 
@@ -152,7 +152,7 @@ public class ProtoUtilsTest {
     public void testRethinkToProto_Map_MessageBuilder() {
         ConfigObject expResult = ConfigObject.newBuilder()
                 .setApiVersion("v1")
-                .setKind(Kind.politenessConfig)
+                .setKind(Kind.crawlHostGroupConfig)
                 .setId("UUID")
                 .setMeta(Meta.newBuilder()
                         .setName("Nasjonalbiblioteket")
@@ -163,15 +163,15 @@ public class ProtoUtilsTest {
                                 .setKey("orgType")
                                 .setValue("Government"))
                         .setCreated(ProtoUtils.odtToTs(OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))))
-                .setPolitenessConfig(PolitenessConfig.newBuilder()
+                .setCrawlHostGroupConfig(CrawlHostGroupConfig.newBuilder()
+                        .addIpRange(IpRange.newBuilder().setIpFrom("127.0.0.1").setIpTo("127.0.0.255"))
                         .setDelayFactor(.1f)
-                        .setRobotsPolicy(RobotsPolicy.IGNORE_ROBOTS)
                         .setMaxRetries(5))
                 .build();
 
-        Map politenessConfig = r.hashMap("id", "UUID")
+        Map crawlHostGroupConfig = r.hashMap("id", "UUID")
                 .with("apiVersion", "v1")
-                .with("kind", "politenessConfig")
+                .with("kind", "crawlHostGroupConfig")
                 .with("meta", r.hashMap()
                         .with("name", "Nasjonalbiblioteket")
                         .with("created", OffsetDateTime.parse("2017-04-06T06:20:35.779Z"))
@@ -179,13 +179,13 @@ public class ProtoUtilsTest {
                                 r.hashMap("key", "frequency").with("value", "Daily"),
                                 r.hashMap("key", "orgType").with("value", "Government")))
                 )
-                .with("politenessConfig", r.hashMap()
+                .with("crawlHostGroupConfig", r.hashMap()
+                        .with("ipRange", r.array(r.hashMap("ipFrom", "127.0.0.1").with("ipTo", "127.0.0.255")))
                         .with("delayFactor", .1f)
-                        .with("robotsPolicy", "IGNORE_ROBOTS")
                         .with("maxRetries", 5)
                 );
 
-        Message result = ProtoUtils.rethinkToProto(politenessConfig, ConfigObject.newBuilder());
+        Message result = ProtoUtils.rethinkToProto(crawlHostGroupConfig, ConfigObject.newBuilder());
 
         assertThat(result).isEqualTo(expResult);
     }

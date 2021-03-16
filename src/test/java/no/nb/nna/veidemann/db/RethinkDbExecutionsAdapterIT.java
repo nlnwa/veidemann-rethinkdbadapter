@@ -228,35 +228,11 @@ public class RethinkDbExecutionsAdapterIT {
     @Test
     public void listJobExecutionStatus() throws DbException {
         JobExecutionStatus jes1 = executionsAdapter.createJobExecutionStatus("jobId1");
-        jes1 = jes1.toBuilder()
-                .putExecutionsState("UNDEFINED", 0)
-                .putExecutionsState("CREATED", 0)
-                .putExecutionsState("FETCHING", 0)
-                .putExecutionsState("SLEEPING", 0)
-                .putExecutionsState("FINISHED", 0)
-                .putExecutionsState("ABORTED_TIMEOUT", 0)
-                .putExecutionsState("ABORTED_SIZE", 0)
-                .putExecutionsState("ABORTED_MANUAL", 0)
-                .putExecutionsState("FAILED", 0)
-                .putExecutionsState("DIED", 0)
-                .putExecutionsState("UNRECOGNIZED", 0)
-                .build();
+        jes1 = jes1.toBuilder().build();
 
         JobExecutionStatus jes2 = executionsAdapter.createJobExecutionStatus("jobId1");
         jes2 = executionsAdapter.setJobExecutionStateAborted(jes2.getId());
-        jes2 = jes2.toBuilder()
-                .putExecutionsState("UNDEFINED", 0)
-                .putExecutionsState("CREATED", 0)
-                .putExecutionsState("FETCHING", 0)
-                .putExecutionsState("SLEEPING", 0)
-                .putExecutionsState("FINISHED", 0)
-                .putExecutionsState("ABORTED_TIMEOUT", 0)
-                .putExecutionsState("ABORTED_SIZE", 0)
-                .putExecutionsState("ABORTED_MANUAL", 0)
-                .putExecutionsState("FAILED", 0)
-                .putExecutionsState("DIED", 0)
-                .putExecutionsState("UNRECOGNIZED", 0)
-                .build();
+        jes2 = jes2.toBuilder().build();
 
         // Check job executions list functions
         ChangeFeed<JobExecutionStatus> jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.getDefaultInstance());
