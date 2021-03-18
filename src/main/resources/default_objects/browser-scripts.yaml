@@ -11,6 +11,10 @@ meta:
       value: "dummy"
     - key: scope_includeSubdomains
       value: "True"
+    - key: scope_allowedSchemes
+      value: "https http"
+    - key: scope_altSeeds
+      value: ""
   description: Default scope check script
   label:
     - key: scope
@@ -19,9 +23,10 @@ meta:
 browserScript:
   browserScriptType: SCOPE_CHECK
   script: |
-    isSameHost(param("scope_includeSubdomains")).then(Include)
-    maxHopsFromSeed(param("scope_maxHopsFromSeed"),param("scope_hopsIncludeRedirects")).then(TooManyHops).abort()
-    isUrl(param("scope_excludedUris")).then(Blocked).abort()
+    isScheme(param('scope_allowedSchemes')).otherwise(Blocked)
+    isSameHost(param('scope_includeSubdomains'), altSeeds=param('scope_altSeeds')).then(Include, continueEvaluation=True).otherwise(Blocked, continueEvaluation=False)
+    maxHopsFromSeed(param('scope_maxHopsFromSeed'), param('scope_hopsIncludeRedirects')).then(TooManyHops)
+    isUrl(param('scope_excludedUris')).then(Blocked)
   urlRegexp: [ ]
 
 ---
