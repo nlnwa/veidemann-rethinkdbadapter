@@ -17,7 +17,7 @@
         <initializer.image.name>veidemann-db-initializer</initializer.image.name>
         <log4j.version>2.13.3</log4j.version>
 
-        <veidemann.api.version>1.0.0-beta21</veidemann.api.version>
+        <veidemann.api.version>1.0.0-beta22</veidemann.api.version>
         <veidemann.commons.version>0.4.9</veidemann.commons.version>
 
         <!--Docker container versions for integration tests-->

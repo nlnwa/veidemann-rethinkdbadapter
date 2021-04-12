@@ -115,7 +115,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
                                 doc -> r.branch(
                                         doc.hasFields("endTime"),
                                         r.hashMap(),
-                                        r.hashMap("state", JobExecutionStatus.State.ABORTED_MANUAL.name()))
+                                        r.hashMap("desiredState", JobExecutionStatus.State.ABORTED_MANUAL.name()))
                         ),
                 JobExecutionStatus.class);
 
@@ -210,7 +210,7 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
                                         doc -> r.branch(
                                                 doc.hasFields("endTime"),
                                                 r.hashMap(),
-                                                r.hashMap("state", state.name()))
+                                                r.hashMap("desiredState", state.name()))
                                 ),
                         CrawlExecutionStatus.class);
             default:
