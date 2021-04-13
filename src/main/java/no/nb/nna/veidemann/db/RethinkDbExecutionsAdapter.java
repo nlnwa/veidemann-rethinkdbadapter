@@ -23,14 +23,9 @@ import com.rethinkdb.net.Cursor;
 import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
 import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
-import no.nb.nna.veidemann.api.frontier.v1.PageLog;
 import no.nb.nna.veidemann.api.report.v1.CrawlExecutionsListRequest;
-import no.nb.nna.veidemann.api.report.v1.CrawlLogListRequest;
 import no.nb.nna.veidemann.api.report.v1.JobExecutionsListRequest;
-import no.nb.nna.veidemann.api.report.v1.ListCountResponse;
-import no.nb.nna.veidemann.api.report.v1.PageLogListRequest;
 import no.nb.nna.veidemann.commons.db.ChangeFeed;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.ExecutionsAdapter;
@@ -276,110 +271,6 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
                 r.table(Tables.STORAGE_REF.name).get(warcId),
                 StorageRef.class
         );
-    }
-
-    @Override
-    public CrawlLog saveCrawlLog(CrawlLog crawlLog) throws DbException {
-        if (!"text/dns".equals(crawlLog.getContentType())) {
-            if (crawlLog.getJobExecutionId().isEmpty()) {
-                LOG.error("Missing JobExecutionId in CrawlLog: {}", crawlLog, new IllegalStateException());
-            }
-            if (crawlLog.getExecutionId().isEmpty()) {
-                LOG.error("Missing ExecutionId in CrawlLog: {}", crawlLog, new IllegalStateException());
-            }
-        }
-        if (crawlLog.getCollectionFinalName().isEmpty()) {
-            LOG.error("Missing collectionFinalName: {}", crawlLog, new IllegalStateException());
-        }
-        if (!crawlLog.hasTimeStamp()) {
-            crawlLog = crawlLog.toBuilder().setTimeStamp(ProtoUtils.getNowTs()).build();
-        }
-
-        Map rMap = ProtoUtils.protoToRethink(crawlLog);
-        return conn.executeInsert("db-saveCrawlLog",
-                r.table(Tables.CRAWL_LOG.name)
-                        .insert(rMap)
-                        .optArg("conflict", "replace"),
-                CrawlLog.class
-        );
-    }
-
-    @Override
-    public ChangeFeed<CrawlLog> listCrawlLogs(CrawlLogListRequest crawlLogListRequest) throws DbException {
-        ListCrawlLogQueryBuilder q = new ListCrawlLogQueryBuilder(crawlLogListRequest);
-
-        Object res = conn.exec("db-listCrawlLogs", q.getListQuery());
-        return new ChangeFeedBase<CrawlLog>(res) {
-            @Override
-            @SuppressWarnings("unchecked")
-            protected Function<Map<String, Object>, CrawlLog> mapper() {
-                return co -> {
-                    // In case of a change feed, the real object is stored in new_val
-                    // If new_val is empty, the object is deleted. We skip those.
-                    if (co.containsKey("new_val")) {
-                        co = (Map) co.get("new_val");
-                        if (co == null) {
-                            return null;
-                        }
-                    }
-                    CrawlLog res = ProtoUtils.rethinkToProto(co, CrawlLog.class);
-                    return res;
-                };
-            }
-        };
-    }
-
-    @Override
-    public ListCountResponse countCrawlLogs(CrawlLogListRequest crawlLogListRequest) throws DbException {
-        ListCrawlLogQueryBuilder q = new ListCrawlLogQueryBuilder(crawlLogListRequest);
-        long res = conn.exec("db-countCrawlLogs", q.getCountQuery());
-        return ListCountResponse.newBuilder().setCount(res).build();
-    }
-
-    @Override
-    public PageLog savePageLog(PageLog pageLog) throws DbException {
-        if (pageLog.getCollectionFinalName().isEmpty()) {
-            LOG.error("Missing collectionFinalName: {}", pageLog, new IllegalStateException());
-        }
-        Map rMap = ProtoUtils.protoToRethink(pageLog);
-        return conn.executeInsert("db-savePageLog",
-                r.table(Tables.PAGE_LOG.name)
-                        .insert(rMap)
-                        .optArg("conflict", "replace"),
-                PageLog.class
-        );
-    }
-
-    @Override
-    public ChangeFeed<PageLog> listPageLogs(PageLogListRequest pageLogListRequest) throws DbException {
-        ListPageLogQueryBuilder q = new ListPageLogQueryBuilder(pageLogListRequest);
-
-        Object res = conn.exec("db-listPageLogs", q.getListQuery());
-        return new ChangeFeedBase<PageLog>(res) {
-            @Override
-            @SuppressWarnings("unchecked")
-            protected Function<Map<String, Object>, PageLog> mapper() {
-                return co -> {
-                    // In case of a change feed, the real object is stored in new_val
-                    // If new_val is empty, the object is deleted. We skip those.
-                    if (co.containsKey("new_val")) {
-                        co = (Map) co.get("new_val");
-                        if (co == null) {
-                            return null;
-                        }
-                    }
-                    PageLog res = ProtoUtils.rethinkToProto(co, PageLog.class);
-                    return res;
-                };
-            }
-        };
-    }
-
-    @Override
-    public ListCountResponse countPageLogs(PageLogListRequest pageLogListRequest) throws DbException {
-        ListPageLogQueryBuilder q = new ListPageLogQueryBuilder(pageLogListRequest);
-        long res = conn.exec("db-countPageLogs", q.getCountQuery());
-        return ListCountResponse.newBuilder().setCount(res).build();
     }
 
     @Override

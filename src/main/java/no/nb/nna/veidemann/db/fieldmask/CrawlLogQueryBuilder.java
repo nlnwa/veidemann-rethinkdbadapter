@@ -17,8 +17,8 @@
 package no.nb.nna.veidemann.db.fieldmask;
 
 import no.nb.nna.veidemann.api.commons.v1.FieldMask;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlLogOrBuilder;
+import no.nb.nna.veidemann.api.log.v1.CrawlLog;
+import no.nb.nna.veidemann.api.log.v1.CrawlLogOrBuilder;
 
 public class CrawlLogQueryBuilder extends RethinkDbFieldMasksQueryBuilder<CrawlLogOrBuilder> {
     private final static ObjectPathAccessor<CrawlLogOrBuilder> OBJ_DEF = new ObjectPathAccessor<>(CrawlLog.class);

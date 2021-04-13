@@ -17,8 +17,8 @@
 package no.nb.nna.veidemann.db.fieldmask;
 
 import no.nb.nna.veidemann.api.commons.v1.FieldMask;
-import no.nb.nna.veidemann.api.frontier.v1.PageLog;
-import no.nb.nna.veidemann.api.frontier.v1.PageLogOrBuilder;
+import no.nb.nna.veidemann.api.log.v1.PageLog;
+import no.nb.nna.veidemann.api.log.v1.PageLogOrBuilder;
 
 public class PageLogQueryBuilder extends RethinkDbFieldMasksQueryBuilder<PageLogOrBuilder> {
     private final static ObjectPathAccessor<PageLogOrBuilder> OBJ_DEF = new ObjectPathAccessor<>(PageLog.class);

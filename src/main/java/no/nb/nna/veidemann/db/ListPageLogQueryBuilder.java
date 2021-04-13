@@ -17,7 +17,7 @@
 package no.nb.nna.veidemann.db;
 
 import com.rethinkdb.gen.ast.ReqlExpr;
-import no.nb.nna.veidemann.api.frontier.v1.PageLogOrBuilder;
+import no.nb.nna.veidemann.api.log.v1.PageLogOrBuilder;
 import no.nb.nna.veidemann.api.report.v1.PageLogListRequest;
 import no.nb.nna.veidemann.db.fieldmask.PageLogQueryBuilder;
 import no.nb.nna.veidemann.db.queryoptimizer.QueryOptimizer;

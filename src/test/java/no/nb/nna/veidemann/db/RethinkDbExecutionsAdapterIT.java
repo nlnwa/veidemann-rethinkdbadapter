@@ -25,7 +25,6 @@ import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
 import no.nb.nna.veidemann.api.contentwriter.v1.RecordType;
 import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus.State;
 import no.nb.nna.veidemann.api.report.v1.CrawlExecutionsListRequest;
@@ -245,17 +244,14 @@ public class RethinkDbExecutionsAdapterIT {
         req.getQueryTemplateBuilder().setState(State.RUNNING);
         req.getQueryMaskBuilder().addPaths("state");
         jList = executionsAdapter.listJobExecutionStatus(req.build());
-        assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes1);
+        assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
+        assertThat(jes2.getDesiredState()).isEqualTo(State.ABORTED_MANUAL);
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).build());
-        assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes2);
+        assertThat(jList.stream()).hasSize(0);
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).addState(State.RUNNING).build());
         assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
-
-        jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).addState(State.RUNNING)
-                .setOrderByPath("state").build());
-        assertThat(jList.stream()).hasSize(2).containsExactly(jes2, jes1);
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().setStartTimeFrom(ProtoUtils.getNowTs()).build());
         assertThat(jList.stream()).hasSize(0);
@@ -328,21 +324,4 @@ public class RethinkDbExecutionsAdapterIT {
         executionsAdapter.deleteCrawledContent(cc.getDigest());
         executionsAdapter.deleteCrawledContent(cc.getDigest());
     }
-
-    /**
-     * Test of addCrawlLog method, of class RethinkDbAdapter.
-     */
-    @Test
-    public void testSaveCrawlLog() throws DbException {
-        CrawlLog cl = CrawlLog.newBuilder()
-                .setContentType("text/plain")
-                .setJobExecutionId("jeid")
-                .setExecutionId("eid")
-                .setCollectionFinalName("collection")
-                .build();
-        CrawlLog result = executionsAdapter.saveCrawlLog(cl);
-        assertThat(result.getContentType()).isEqualTo("text/plain");
-        assertThat(result.getWarcId()).isNotEmpty();
-    }
-
 }
