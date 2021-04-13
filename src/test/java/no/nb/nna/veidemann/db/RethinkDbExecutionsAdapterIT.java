@@ -25,7 +25,6 @@ import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
 import no.nb.nna.veidemann.api.contentwriter.v1.RecordType;
 import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlLog;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus.State;
 import no.nb.nna.veidemann.api.report.v1.CrawlExecutionsListRequest;
@@ -328,21 +327,4 @@ public class RethinkDbExecutionsAdapterIT {
         executionsAdapter.deleteCrawledContent(cc.getDigest());
         executionsAdapter.deleteCrawledContent(cc.getDigest());
     }
-
-    /**
-     * Test of addCrawlLog method, of class RethinkDbAdapter.
-     */
-    @Test
-    public void testSaveCrawlLog() throws DbException {
-        CrawlLog cl = CrawlLog.newBuilder()
-                .setContentType("text/plain")
-                .setJobExecutionId("jeid")
-                .setExecutionId("eid")
-                .setCollectionFinalName("collection")
-                .build();
-        CrawlLog result = executionsAdapter.saveCrawlLog(cl);
-        assertThat(result.getContentType()).isEqualTo("text/plain");
-        assertThat(result.getWarcId()).isNotEmpty();
-    }
-
 }

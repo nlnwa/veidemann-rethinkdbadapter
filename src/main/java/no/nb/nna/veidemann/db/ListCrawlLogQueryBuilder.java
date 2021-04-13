@@ -17,7 +17,7 @@
 package no.nb.nna.veidemann.db;
 
 import com.rethinkdb.gen.ast.ReqlExpr;
-import no.nb.nna.veidemann.api.frontier.v1.CrawlLogOrBuilder;
+import no.nb.nna.veidemann.api.log.v1.CrawlLogOrBuilder;
 import no.nb.nna.veidemann.api.report.v1.CrawlLogListRequest;
 import no.nb.nna.veidemann.db.fieldmask.CrawlLogQueryBuilder;
 import no.nb.nna.veidemann.db.queryoptimizer.QueryOptimizer;
