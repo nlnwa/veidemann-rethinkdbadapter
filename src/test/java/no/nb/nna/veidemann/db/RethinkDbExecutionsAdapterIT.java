@@ -244,17 +244,14 @@ public class RethinkDbExecutionsAdapterIT {
         req.getQueryTemplateBuilder().setState(State.RUNNING);
         req.getQueryMaskBuilder().addPaths("state");
         jList = executionsAdapter.listJobExecutionStatus(req.build());
-        assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes1);
+        assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
+        assertThat(jes2.getDesiredState()).isEqualTo(State.ABORTED_MANUAL);
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).build());
-        assertThat(jList.stream()).hasSize(1).containsExactlyInAnyOrder(jes2);
+        assertThat(jList.stream()).hasSize(0);
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).addState(State.RUNNING).build());
         assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
-
-        jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().addState(State.ABORTED_MANUAL).addState(State.RUNNING)
-                .setOrderByPath("state").build());
-        assertThat(jList.stream()).hasSize(2).containsExactly(jes2, jes1);
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().setStartTimeFrom(ProtoUtils.getNowTs()).build());
         assertThat(jList.stream()).hasSize(0);
