@@ -15,21 +15,22 @@
  */
 package no.nb.nna.veidemann.db.opentracing;
 
-import java.net.SocketAddress;
-import java.util.Optional;
-import java.util.concurrent.TimeoutException;
-
 import com.rethinkdb.ast.ReqlAst;
 import com.rethinkdb.gen.ast.Datum;
 import com.rethinkdb.model.OptArgs;
 import com.rethinkdb.net.Connection;
-import io.opentracing.ActiveSpan;
-import io.opentracing.NoopActiveSpanSource;
+import io.opentracing.Scope;
+import io.opentracing.Span;
 import io.opentracing.Tracer;
+import io.opentracing.noop.NoopSpan;
 import io.opentracing.tag.Tags;
 import io.opentracing.util.GlobalTracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.SocketAddress;
+import java.util.Optional;
+import java.util.concurrent.TimeoutException;
 
 /**
  *
@@ -56,22 +57,34 @@ public class ConnectionTracingInterceptor extends Connection {
 
     @Override
     public void runNoReply(ReqlAst term, OptArgs globalOpts) {
-        try (ActiveSpan span = buildSpan(globalOpts, "runNoReply")) {
+        Tracer tracer = getTracer();
+        Span span = buildSpan(tracer, globalOpts, "runNoReply");
+        try (Scope scope = tracer.scopeManager().activate(span)) {
             conn.runNoReply(term, globalOpts);
+        } finally {
+            span.finish();
         }
     }
 
     @Override
     public <T, P> T run(ReqlAst term, OptArgs globalOpts, Optional<Class<P>> pojoClass, Optional<Long> timeout) {
-        try (ActiveSpan span = buildSpan(globalOpts, "run")) {
+        Tracer tracer = getTracer();
+        Span span = buildSpan(tracer, globalOpts, "run");
+        try (Scope scope = tracer.scopeManager().activate(span)) {
             return conn.run(term, globalOpts, pojoClass, timeout);
+        } finally {
+            span.finish();
         }
     }
 
     @Override
     public <T, P> T run(ReqlAst term, OptArgs globalOpts, Optional<Class<P>> pojoClass) {
-        try (ActiveSpan span = buildSpan(globalOpts, "run")) {
+        Tracer tracer = getTracer();
+        Span span = buildSpan(tracer, globalOpts, "run");
+        try (Scope scope = tracer.scopeManager().activate(span)) {
             return conn.run(term, globalOpts, pojoClass);
+        } finally {
+            span.finish();
         }
     }
 
@@ -135,12 +148,16 @@ public class ConnectionTracingInterceptor extends Connection {
         return conn.db();
     }
 
-    ActiveSpan buildSpan(OptArgs globalOpts, String defaultOperationName) {
+    Tracer getTracer() {
+        return GlobalTracer.get();
+    }
+
+    Span buildSpan(Tracer tracer, OptArgs globalOpts, String defaultOperationName) {
         String operationName;
         ReqlAst operationNameDatum = globalOpts.remove(OPERATION_NAME_KEY);
 
-        if (withActiveSpanOnly && GlobalTracer.get().activeSpan() == null) {
-            return NoopActiveSpanSource.NoopActiveSpan.INSTANCE;
+        if (withActiveSpanOnly && tracer.scopeManager().activeSpan() == null) {
+            return NoopSpan.INSTANCE;
         }
 
         if (operationNameDatum != null && (operationNameDatum instanceof Datum)) {
@@ -149,12 +166,12 @@ public class ConnectionTracingInterceptor extends Connection {
             operationName = defaultOperationName;
         }
 
-        Tracer.SpanBuilder spanBuilder = GlobalTracer.get().buildSpan(operationName)
+        Tracer.SpanBuilder spanBuilder = tracer.buildSpan(operationName)
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(Tags.COMPONENT.getKey(), "java-rethinkDb")
                 .withTag(Tags.DB_TYPE.getKey(), "rethinkDb");
 
-        ActiveSpan span = spanBuilder.startActive();
+        Span span = spanBuilder.start();
         return span;
     }
 

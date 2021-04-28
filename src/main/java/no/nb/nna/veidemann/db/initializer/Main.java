@@ -21,7 +21,6 @@ import com.typesafe.config.ConfigFactory;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbException;
 import no.nb.nna.veidemann.commons.db.DbService;
-import no.nb.nna.veidemann.commons.opentracing.TracerFactory;
 
 /**
  * Main class for launching the service.
@@ -36,8 +35,6 @@ public final class Main {
         } catch (DbConnectionException e) {
             throw new RuntimeException(e);
         }
-
-        TracerFactory.init("DbInitializer");
     }
 
     /**
