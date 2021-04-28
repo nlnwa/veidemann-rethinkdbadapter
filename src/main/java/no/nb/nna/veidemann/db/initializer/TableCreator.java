@@ -98,10 +98,14 @@ public class TableCreator {
     }
 
     void deleteIndex(Tables table, String indexName) throws DbQueryException, DbConnectionException {
-        if (!tableExists(table)) return;
-        if (!indexExists(table, indexName)) return;
-        LOG.info("Deleting index {} from table {}", indexName, table.name);
-        conn.exec(r.table(table.name).indexDrop(indexName));
+        deleteIndex(table.name, indexName);
+    }
+
+    void deleteIndex(String tableName, String indexName) throws DbQueryException, DbConnectionException {
+        if (!tableExists(tableName)) return;
+        if (!indexExists(tableName, indexName)) return;
+        LOG.info("Deleting index {} from table {}", indexName, tableName);
+        conn.exec(r.table(tableName).indexDrop(indexName));
     }
 
     boolean tableExists(Tables table) throws DbQueryException, DbConnectionException {
@@ -113,7 +117,11 @@ public class TableCreator {
     }
 
     boolean indexExists(Tables table, String indexName) throws DbQueryException, DbConnectionException {
-        return conn.exec(r.table(table.name).indexList().contains(indexName));
+        return indexExists(table.name, indexName);
+    }
+
+    boolean indexExists(String tableName, String indexName) throws DbQueryException, DbConnectionException {
+        return conn.exec(r.table(tableName).indexList().contains(indexName));
     }
 
     void waitForIndexes() throws DbQueryException, DbConnectionException {

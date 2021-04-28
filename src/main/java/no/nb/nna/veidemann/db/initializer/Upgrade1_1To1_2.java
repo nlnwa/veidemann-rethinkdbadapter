@@ -33,7 +33,7 @@ public class Upgrade1_1To1_2 extends UpgradeDbBase {
         // update crawled_content with TargetUri and Timestamp
         conn.exec(r.table(Tables.CRAWLED_CONTENT.name)
                 .filter(f -> f.hasFields("targetUri").not())
-                .update(d -> d.merge(r.table(Tables.CRAWL_LOG.name)
+                .update(d -> d.merge(r.table("crawl_log")
                         .get(d.g("warcId"))
                         .default_(r.hashMap())
                         .pluck("requestedUri", "fetchTimeStamp")

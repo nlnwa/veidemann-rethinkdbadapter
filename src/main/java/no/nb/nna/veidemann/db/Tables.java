@@ -8,14 +8,10 @@ import no.nb.nna.veidemann.api.eventhandler.v1.EventObject;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.QueuedUri;
-import no.nb.nna.veidemann.api.log.v1.CrawlLog;
-import no.nb.nna.veidemann.api.log.v1.PageLog;
 
 public enum Tables {
     SYSTEM("system", null),
     CONFIG("config", ConfigObject.getDefaultInstance()),
-    CRAWL_LOG("crawl_log", CrawlLog.getDefaultInstance()),
-    PAGE_LOG("page_log", PageLog.getDefaultInstance()),
     CRAWLED_CONTENT("crawled_content", CrawledContent.getDefaultInstance()),
     URI_QUEUE("uri_queue", QueuedUri.getDefaultInstance()),
     EXECUTIONS("executions", CrawlExecutionStatus.getDefaultInstance()),

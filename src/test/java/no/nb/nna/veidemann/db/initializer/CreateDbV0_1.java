@@ -56,13 +56,13 @@ public class CreateDbV0_1 implements Runnable {
                         r.array(r.hashMap("logger", "no.nb.nna.veidemann").with("level", "INFO"))
                 )));
 
-        conn.exec(r.tableCreate(Tables.CRAWL_LOG.name).optArg("primary_key", "warcId"));
-        conn.exec(r.table(Tables.CRAWL_LOG.name)
+        conn.exec(r.tableCreate("crawl_log").optArg("primary_key", "warcId"));
+        conn.exec(r.table("crawl_log")
                 .indexCreate("surt_time", row -> r.array(row.g("surt"), row.g("timeStamp"))));
-        conn.exec(r.table(Tables.CRAWL_LOG.name).indexCreate("executionId"));
+        conn.exec(r.table("crawl_log").indexCreate("executionId"));
 
-        conn.exec(r.tableCreate(Tables.PAGE_LOG.name).optArg("primary_key", "warcId"));
-        conn.exec(r.table(Tables.PAGE_LOG.name).indexCreate("executionId"));
+        conn.exec(r.tableCreate("page_log").optArg("primary_key", "warcId"));
+        conn.exec(r.table("page_log").indexCreate("executionId"));
 
         conn.exec(r.tableCreate(Tables.CRAWLED_CONTENT.name).optArg("primary_key", "digest"));
 
@@ -124,8 +124,8 @@ public class CreateDbV0_1 implements Runnable {
 
         conn.exec(r.table(Tables.URI_QUEUE.name)
                 .indexWait("surt", "executionId", "crawlHostGroupKey_sequence_earliestFetch"));
-        conn.exec(r.table(Tables.CRAWL_LOG.name).indexWait("surt_time", "executionId"));
-        conn.exec(r.table(Tables.PAGE_LOG.name).indexWait("executionId"));
+        conn.exec(r.table("crawl_log").indexWait("surt_time", "executionId"));
+        conn.exec(r.table("page_log").indexWait("executionId"));
         conn.exec(r.table(Tables.SEEDS.name).indexWait("jobId", "entityId"));
         conn.exec(r.table("crawl_host_group").indexWait("nextFetchTime"));
         conn.exec(r.table(Tables.EXECUTIONS.name).indexWait("startTime"));
