@@ -18,7 +18,6 @@ package no.nb.nna.veidemann.db.initializer;
 import no.nb.nna.veidemann.commons.db.DbConnectionException;
 import no.nb.nna.veidemann.commons.db.DbQueryException;
 import no.nb.nna.veidemann.db.RethinkDbConnection;
-import no.nb.nna.veidemann.db.Tables;
 
 
 public class Upgrade1_10To1_11 extends UpgradeDbBase {
@@ -27,7 +26,7 @@ public class Upgrade1_10To1_11 extends UpgradeDbBase {
     }
 
     final void upgrade() throws DbQueryException, DbConnectionException {
-        deleteIndex(Tables.CRAWL_LOG, "surt_time");
+        deleteIndex("crawl_log", "surt_time");
 
         deleteTable("locks");
         deleteTable("extracted_text");
