@@ -87,4 +87,19 @@ class RethinkAstDecompilerTest {
         ReqlAst ast2 = r.table("mintabell").getAll("foo", "bar").filter((row) -> row.eq(r.array("ugh")));
         assertThat(RethinkAstDecompiler.isEqual(ast1, ast2)).isTrue();
     }
+
+    @Test
+    void testDefault() {
+        ReqlAst ast = r.table("mintabell").filter(p1 -> p1.g("foo").default_("").eq("foo"));
+        String expected = "r.table(\"mintabell\").filter(p1 -> p1.g(\"foo\").default(\"\").eq(\"foo\"))";
+        assertThat(new RethinkAstDecompiler(ast).toString()).isEqualTo(expected);
+    }
+
+    @Test
+    void testHasFields() {
+        ReqlAst ast = r.table("mintabell").getAll("foo").filter(p1 -> p1.hasFields("foo"));
+        String expected = "r.table(\"mintabell\").getAll(\"foo\").filter(p1 -> p1.hasFields(\"foo\"))";
+
+        assertThat(new RethinkAstDecompiler(ast).toString()).isEqualTo(expected);
+    }
 }

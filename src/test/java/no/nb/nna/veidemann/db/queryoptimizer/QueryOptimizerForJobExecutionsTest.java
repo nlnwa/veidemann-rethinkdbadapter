@@ -49,7 +49,7 @@ class QueryOptimizerForJobExecutionsTest {
                 .addId("id2")
                 .addState(State.CREATED);
         q = new ListJobExecutionQueryBuilder(req.build()).getListQuery();
-        expected = r.table("job_executions").getAll("id2").filter(p1 -> p1.g("state").eq("CREATED"));
+        expected = r.table("job_executions").getAll("id2").filter(p1 -> p1.g("state").default_("UNDEFINED").eq("CREATED"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
     }
 
@@ -71,7 +71,7 @@ class QueryOptimizerForJobExecutionsTest {
                 .addState(State.CREATED)
                 .addId("id2");
         q = new ListJobExecutionQueryBuilder(req.build()).getListQuery();
-        expected = r.table("job_executions").getAll("id2").filter(p1 -> p1.g("state").eq("CREATED"));
+        expected = r.table("job_executions").getAll("id2").filter(p1 -> p1.g("state").default_("UNDEFINED").eq("CREATED"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         // Test list by state and order by state
@@ -165,7 +165,7 @@ class QueryOptimizerForJobExecutionsTest {
         req.getQueryMaskBuilder().addPaths("jobId");
         q = new ListJobExecutionQueryBuilder(req.build()).getListQuery();
         expected = r.table("job_executions").getAll("CREATED").optArg("index", "state")
-                .filter(p1 -> p1.g("jobId").eq("jid1"));
+                .filter(p1 -> p1.g("jobId").default_("").eq("jid1"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         // Test list by startTime and jobId
