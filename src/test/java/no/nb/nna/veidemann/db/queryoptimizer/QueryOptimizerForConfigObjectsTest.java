@@ -16,6 +16,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class QueryOptimizerForConfigObjectsTest {
     @Test
+    public void testListConfigObjectsBoolean() throws DbException {
+        ReqlAst q;
+        ReqlAst expected;
+        ListRequest.Builder req;
+
+        // Test list seed by a boolean queryMask
+        req = ListRequest.newBuilder().setKind(seed);
+        req.getQueryTemplateBuilder().getSeedBuilder().setDisabled(false);
+        req.getQueryMaskBuilder().addPaths("seed.disabled");
+        q = new ListConfigObjectQueryBuilder(req.build()).getListQuery();
+        expected = r.table("config_seeds")
+                .filter(p1 -> p1.g("seed").g("disabled").default_(false).eq(false));
+        assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
+    }
+
+    @Test
     public void testListConfigObjects() throws DbException {
         ReqlAst q;
         ReqlAst expected;
@@ -225,7 +241,7 @@ class QueryOptimizerForConfigObjectsTest {
         q = new ListConfigObjectQueryBuilder(req.build()).getListQuery();
         expected = r.table("config").getAll(r.array("browserScript", "bs1"))
                 .optArg("index", "configRefs")
-                .filter(p1 -> p1.g("kind").eq("browserConfig"));
+                .filter(p1 -> p1.g("kind").default_("undefined").eq("browserConfig"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         // Test list browserConfig by two scriptRefs using template filter
@@ -240,7 +256,7 @@ class QueryOptimizerForConfigObjectsTest {
         q = new ListConfigObjectQueryBuilder(req.build()).getListQuery();
         expected = r.table("config").getAll(r.array("browserScript", "bs1"), r.array("browserScript", "bs2"))
                 .optArg("index", "configRefs")
-                .filter(p1 -> p1.g("kind").eq("browserConfig"));
+                .filter(p1 -> p1.g("kind").default_("undefined").eq("browserConfig"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         // Test order
@@ -252,7 +268,7 @@ class QueryOptimizerForConfigObjectsTest {
         q = new ListConfigObjectQueryBuilder(req.setKind(crawlScheduleConfig).build()).getListQuery();
         expected = r.table("config").between(r.array("aaa", "bbb"), r.array("aaa", "bbb"))
                 .optArg("right_bound", "closed").optArg("index", "label")
-                .filter(p2 -> p2.g("kind").eq("crawlScheduleConfig"))
+                .filter(p2 -> p2.g("kind").default_("undefined").eq("crawlScheduleConfig"))
                 .orderBy(p1 -> p1.g("meta").g("name").downcase());
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
@@ -271,7 +287,7 @@ class QueryOptimizerForConfigObjectsTest {
         q = new ListConfigObjectQueryBuilder(req.setKind(crawlScheduleConfig).build()).getListQuery();
         expected = r.table("config").between(r.array("aaa", "bbb"), r.array("aaa", "bbb"))
                 .optArg("right_bound", "closed").optArg("index", "label")
-                .filter(p2 -> p2.g("kind").eq("crawlScheduleConfig"))
+                .filter(p2 -> p2.g("kind").default_("undefined").eq("crawlScheduleConfig"))
                 .orderBy(r.desc(p1 -> p1.g("meta").g("name").downcase()));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
@@ -291,7 +307,7 @@ class QueryOptimizerForConfigObjectsTest {
         q = new ListConfigObjectQueryBuilder(req.setKind(crawlScheduleConfig).build()).getListQuery();
         expected = r.table("config").between(r.array("aaa", "bbb"), r.array("aaa", "bbb"))
                 .optArg("right_bound", "closed").optArg("index", "label")
-                .filter(p2 -> p2.g("kind").eq("crawlScheduleConfig"))
+                .filter(p2 -> p2.g("kind").default_("undefined").eq("crawlScheduleConfig"))
                 .orderBy(p1 -> p1.g("meta").g("lastModified"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
@@ -313,7 +329,7 @@ class QueryOptimizerForConfigObjectsTest {
         expected = r.table("config").between(r.array("aaa", "bbb"), r.array("aaa", "bbb"))
                 .optArg("right_bound", "closed").optArg("index", "label")
                 .orderBy().optArg("index", "label")
-                .filter(p3 -> p3.g("kind").eq("crawlScheduleConfig"))
+                .filter(p3 -> p3.g("kind").default_("undefined").eq("crawlScheduleConfig"))
                 .filter(p1 -> p1.g("meta").g("name").match("(?i)c[s|j]"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
@@ -330,7 +346,7 @@ class QueryOptimizerForConfigObjectsTest {
                 .setNameRegex("c[s|j].[1|3]");
         q = new ListConfigObjectQueryBuilder(req.setKind(crawlScheduleConfig).build()).getListQuery();
         expected = r.table("config").orderBy().optArg("index", "label")
-                .filter(p2 -> p2.g("kind").eq("crawlScheduleConfig"))
+                .filter(p2 -> p2.g("kind").default_("undefined").eq("crawlScheduleConfig"))
                 .filter(p1 -> p1.g("meta").g("name").match("(?i)c[s|j].[1|3]"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
@@ -377,7 +393,7 @@ class QueryOptimizerForConfigObjectsTest {
         q = new ListConfigObjectQueryBuilder(req.setKind(crawlScheduleConfig).build()).getListQuery();
         expected = r.table("config").between(r.array("foo", "bar"), r.array("foo", "bar"))
                 .optArg("right_bound", "closed").optArg("index", "label")
-                .filter(p1 -> p1.g("kind").eq("crawlScheduleConfig"));
+                .filter(p1 -> p1.g("kind").default_("undefined").eq("crawlScheduleConfig"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         q = new ListConfigObjectQueryBuilder(req.setKind(seed).build()).getListQuery();
@@ -411,7 +427,7 @@ class QueryOptimizerForConfigObjectsTest {
         q = new ListConfigObjectQueryBuilder(req.setKind(crawlScheduleConfig).build()).getListQuery();
         expected = r.table("config").between(r.array("home", "run"), r.array("home", "run"))
                 .optArg("right_bound", "closed").optArg("index", "label")
-                .filter(p1 -> p1.g("kind").eq("crawlScheduleConfig"));
+                .filter(p1 -> p1.g("kind").default_("undefined").eq("crawlScheduleConfig"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         q = new ListConfigObjectQueryBuilder(req.setKind(seed).build()).getListQuery();
@@ -426,7 +442,7 @@ class QueryOptimizerForConfigObjectsTest {
         q = new ListConfigObjectQueryBuilder(req.setKind(crawlScheduleConfig).build()).getListQuery();
         expected = r.table("config").between("foo", "foo")
                 .optArg("index", "label_value").optArg("right_bound", "closed")
-                .filter(p1 -> p1.g("kind").eq("crawlScheduleConfig"));
+                .filter(p1 -> p1.g("kind").default_("undefined").eq("crawlScheduleConfig"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         q = new ListConfigObjectQueryBuilder(req.setKind(seed).build()).getListQuery();
@@ -441,7 +457,7 @@ class QueryOptimizerForConfigObjectsTest {
         q = new ListConfigObjectQueryBuilder(req.setKind(crawlScheduleConfig).build()).getListQuery();
         expected = r.table("config").between("foo", "foo\uFFFF")
                 .optArg("index", "label_value").optArg("right_bound", "closed")
-                .filter(p1 -> p1.g("kind").eq("crawlScheduleConfig"));
+                .filter(p1 -> p1.g("kind").default_("undefined").eq("crawlScheduleConfig"));
         assertThat(new RethinkAstDecompiler(q)).isEqualTo(new RethinkAstDecompiler(expected));
 
         q = new ListConfigObjectQueryBuilder(req.setKind(seed).build()).getListQuery();

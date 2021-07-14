@@ -1,5 +1,6 @@
 package no.nb.nna.veidemann.db.queryoptimizer;
 
+import com.google.protobuf.Descriptors;
 import com.google.protobuf.MessageOrBuilder;
 import com.rethinkdb.gen.ast.ReqlExpr;
 import com.rethinkdb.gen.ast.Table;
@@ -145,7 +146,20 @@ class GetAllSnippet<T extends MessageOrBuilder> extends Snippet<T> {
             }
         } else {
             if (values.size() == 1) {
-                return r.expr(values.get(0)).eq(queryBuilder.buildGetFieldExpression(pathDef, row));
+                Object defaultValue;
+                Object value = values.get(0);
+                switch(pathDef.getDescriptor().getType()) {
+                    case MESSAGE:
+                        defaultValue = null;
+                        break;
+                    case ENUM:
+                        defaultValue = pathDef.getDescriptor().getDefaultValue().toString();
+                        break;
+                    default:
+                        defaultValue = pathDef.getDescriptor().getDefaultValue();
+                        break;
+                }
+                return r.expr(value).eq(queryBuilder.buildGetFieldExpression(pathDef, row).default_(r.expr(defaultValue)));
             } else {
                 return queryBuilder.buildGetFieldExpression(pathDef, row).coerceTo("array").contains(r.args(values));
             }
