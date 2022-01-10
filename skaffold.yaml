@@ -1,12 +1,9 @@
-apiVersion: skaffold/v2beta9
+apiVersion: skaffold/v2beta18
 kind: Config
-metadata:
-  name: veidemann-db-initializer
 build:
   artifacts:
-    - image: norsknettarkiv/veidemann-db-initializer
-      jib: {}
+    - image: ghcr.io/nlnwa/veidemann-db-initializer
 deploy:
   kustomize:
     paths:
-      - 
+      - github.com/nlnwa/veidemann/dev/veidemann/veidemann-db-initializer
