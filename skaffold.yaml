@@ -9,4 +9,4 @@ build:
 deploy:
   kustomize:
     paths:
-      - k8s
+      - 
