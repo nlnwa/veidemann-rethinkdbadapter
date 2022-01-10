@@ -43,17 +43,16 @@ public class CreateNewDb extends TableCreator implements Runnable {
         }
     }
 
-    private final void createDb() throws DbQueryException, DbConnectionException {
+    private void createDb() throws DbQueryException, DbConnectionException {
         if (conn.exec(r.dbList().contains(dbName))) return;
 
         conn.exec("create-db", r.dbCreate(dbName));
     }
 
-    private final void createTables() throws DbQueryException, DbConnectionException {
+    private void createTables() throws DbQueryException, DbConnectionException {
         createSystemTable();
         createConfigsTable();
         createCrawledContentTable();
-        createStorageRefTable();
         createUriQueueTable();
         createCrawlExecutionsTable();
         createJobExecutionsTable();
@@ -94,10 +93,6 @@ public class CreateNewDb extends TableCreator implements Runnable {
 
     private void createCrawledContentTable() throws DbQueryException, DbConnectionException {
         createTable(Tables.CRAWLED_CONTENT, "digest");
-    }
-
-    private void createStorageRefTable() throws DbQueryException, DbConnectionException {
-        createTable(Tables.STORAGE_REF, "warcId");
     }
 
     private void createUriQueueTable() throws DbQueryException, DbConnectionException {
@@ -146,7 +141,7 @@ public class CreateNewDb extends TableCreator implements Runnable {
         createIndex(Tables.EVENTS, "lastModified", e -> e.g("activity").nth(0).g("modifiedTime"));
     }
 
-    private final void createMetaIndexes(Tables table) throws DbQueryException, DbConnectionException {
+    private void createMetaIndexes(Tables table) throws DbQueryException, DbConnectionException {
         createIndex(table, "name", row -> row.g("meta").g("name").downcase());
         createIndex(table, "label", true, row -> row.g("meta").g("label").map(
                 label -> r.array(label.g("key").downcase(), label.g("value").downcase())));
