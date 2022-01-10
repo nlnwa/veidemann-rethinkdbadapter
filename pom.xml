@@ -196,7 +196,7 @@
                 <artifactId>jib-maven-plugin</artifactId>
                 <configuration>
                     <to>
-                        <image>ghcr.io/nlnwa/${initializer.image.name}:${project.version}</image>
+                        <image>${initializer.image.name}:${project.version}</image>
                     </to>
                     <container>
                         <ports>
