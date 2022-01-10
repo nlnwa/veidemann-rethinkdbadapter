@@ -128,7 +128,7 @@ public class DbInitializerTestIT {
         List<String> tables = conn.exec(r.tableList());
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name, Tables.SEEDS.name,
                 Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name, Tables.JOB_EXECUTIONS.name,
-                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
+                Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
         List<String> indexes = conn.exec(r.table(Tables.CONFIG.name).indexList());
         assertThat(indexes).containsOnly("configRefs", "kind_label_key", "label", "label_value", "lastModified", "lastModifiedBy", "name");
@@ -139,7 +139,7 @@ public class DbInitializerTestIT {
         tables = conn.exec(r.tableList());
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name,
                 Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name, Tables.JOB_EXECUTIONS.name,
-                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
+                Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
         indexes = conn.exec(r.table(Tables.CONFIG.name).indexList());
         assertThat(indexes).containsOnly("kind_label_key", "label", "label_value", "lastModified", "lastModifiedBy", "name");
@@ -149,7 +149,7 @@ public class DbInitializerTestIT {
         tables = conn.exec(r.tableList());
         assertThat(tables).containsOnly(Tables.CONFIG.name, Tables.CRAWL_ENTITIES.name, Tables.SEEDS.name,
                 Tables.CRAWLED_CONTENT.name, Tables.EXECUTIONS.name, Tables.JOB_EXECUTIONS.name,
-                Tables.STORAGE_REF.name, Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
+                Tables.SYSTEM.name, Tables.URI_QUEUE.name, Tables.EVENTS.name);
 
         indexes = conn.exec(r.table(Tables.CONFIG.name).indexList());
         assertThat(indexes).containsOnly("configRefs", "kind_label_key", "label", "label_value", "lastModified", "lastModifiedBy", "name");

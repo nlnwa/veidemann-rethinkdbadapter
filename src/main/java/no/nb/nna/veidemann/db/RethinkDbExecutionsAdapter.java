@@ -20,8 +20,6 @@ import com.google.protobuf.Message;
 import com.rethinkdb.RethinkDB;
 import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Cursor;
-import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
-import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
 import no.nb.nna.veidemann.api.report.v1.CrawlExecutionsListRequest;
@@ -34,7 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 
 public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
@@ -212,65 +209,6 @@ public class RethinkDbExecutionsAdapter implements ExecutionsAdapter {
                 throw new IllegalArgumentException(
                         "State must be one of ABORTED_SIZE, ABORTED_TIMEOUT, ABORTED_MANUAL, but was: " + state);
         }
-    }
-
-    @Override
-    public Optional<CrawledContent> hasCrawledContent(CrawledContent crawledContent) throws DbException {
-        ensureContainsValue(crawledContent, "digest");
-        ensureContainsValue(crawledContent, "warc_id");
-        ensureContainsValue(crawledContent, "target_uri");
-        ensureContainsValue(crawledContent, "date");
-
-        Map rMap = ProtoUtils.protoToRethink(crawledContent);
-        Map<String, Object> response = conn.exec("db-hasCrawledContent",
-                r.table(Tables.CRAWLED_CONTENT.name)
-                        .insert(rMap)
-                        .optArg("conflict", (id, old_doc, new_doc) -> old_doc)
-                        .optArg("return_changes", "always")
-                        .g("changes").nth(0).g("old_val"));
-
-        if (response == null) {
-            return Optional.empty();
-        } else {
-            CrawledContent result = ProtoUtils.rethinkToProto(response, CrawledContent.class);
-
-            // Check existence of original in storage ref table.
-            // This prevents false positives in the case writing of original record was cancelled after
-            // crawled_content table was updated.
-            Object check = conn.exec("db-hasCrawledContentCheck",
-                    r.table(Tables.STORAGE_REF.name).get(result.getWarcId()));
-            if (check == null) {
-                return Optional.empty();
-            } else {
-                return Optional.of(result);
-            }
-        }
-    }
-
-    public void deleteCrawledContent(String digest) throws DbException {
-        conn.exec("db-deleteCrawledContent", r.table(Tables.CRAWLED_CONTENT.name).get(digest).delete());
-    }
-
-    @Override
-    public StorageRef saveStorageRef(StorageRef storageRef) throws DbException {
-        ensureContainsValue(storageRef, "warc_id");
-        ensureContainsValue(storageRef, "storage_ref");
-
-        Map rMap = ProtoUtils.protoToRethink(storageRef);
-        return conn.executeInsert("db-saveStorageRef",
-                r.table(Tables.STORAGE_REF.name)
-                        .insert(rMap)
-                        .optArg("conflict", "replace"),
-                StorageRef.class
-        );
-    }
-
-    @Override
-    public StorageRef getStorageRef(String warcId) throws DbException {
-        return conn.executeGet("get-getStorageRef",
-                r.table(Tables.STORAGE_REF.name).get(warcId),
-                StorageRef.class
-        );
     }
 
     @Override

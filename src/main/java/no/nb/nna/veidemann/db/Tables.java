@@ -18,7 +18,6 @@ public enum Tables {
     JOB_EXECUTIONS("job_executions", JobExecutionStatus.getDefaultInstance()),
     CRAWL_ENTITIES("config_crawl_entities", ConfigObject.getDefaultInstance()),
     SEEDS("config_seeds", ConfigObject.getDefaultInstance()),
-    STORAGE_REF("storage_ref", StorageRef.getDefaultInstance()),
     EVENTS("events", EventObject.getDefaultInstance());
 
     public final String name;

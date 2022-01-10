@@ -21,9 +21,6 @@ import com.google.protobuf.util.Timestamps;
 import com.rethinkdb.RethinkDB;
 import com.rethinkdb.gen.ast.Insert;
 import com.rethinkdb.gen.ast.Update;
-import no.nb.nna.veidemann.api.contentwriter.v1.CrawledContent;
-import no.nb.nna.veidemann.api.contentwriter.v1.RecordType;
-import no.nb.nna.veidemann.api.contentwriter.v1.StorageRef;
 import no.nb.nna.veidemann.api.frontier.v1.CrawlExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus;
 import no.nb.nna.veidemann.api.frontier.v1.JobExecutionStatus.State;
@@ -42,10 +39,8 @@ import org.junit.Test;
 import java.text.ParseException;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class RethinkDbExecutionsAdapterIT {
     public static RethinkDbConnection conn;
@@ -258,70 +253,5 @@ public class RethinkDbExecutionsAdapterIT {
 
         jList = executionsAdapter.listJobExecutionStatus(JobExecutionsListRequest.newBuilder().setStartTimeTo(ProtoUtils.getNowTs()).build());
         assertThat(jList.stream()).hasSize(2).containsExactlyInAnyOrder(jes1, jes2);
-    }
-
-    /**
-     * Test of hasCrawledContent method, of class RethinkDbAdapter.
-     */
-    @Test
-    public void testHasCrawledContent() throws DbException {
-        CrawledContent cc1 = CrawledContent.newBuilder()
-                .setDigest("testIsDuplicateContent")
-                .setWarcId("warc-id1")
-                .setTargetUri("target-uri1")
-                .setDate(ProtoUtils.getNowTs())
-                .build();
-        CrawledContent cc2 = CrawledContent.newBuilder()
-                .setDigest("testIsDuplicateContent")
-                .setWarcId("warc-id2")
-                .setTargetUri("target-uri2")
-                .setDate(ProtoUtils.getNowTs())
-                .build();
-        CrawledContent cc3 = CrawledContent.newBuilder()
-                .setDigest("testIsDuplicateContent")
-                .setWarcId("warc-id3")
-                .setTargetUri("target-uri3")
-                .setDate(ProtoUtils.getNowTs())
-                .build();
-
-        assertThat(executionsAdapter.hasCrawledContent(cc1).isPresent()).isFalse();
-        executionsAdapter.saveStorageRef(StorageRef.newBuilder()
-                .setWarcId(cc1.getWarcId())
-                .setRecordType(RecordType.REQUEST)
-                .setStorageRef("warcfile:test:0")
-                .build());
-
-        Optional<CrawledContent> r2 = executionsAdapter.hasCrawledContent(cc2);
-        assertThat(r2.isPresent()).isTrue();
-        assertThat(r2.get()).isEqualTo(cc1);
-
-        Optional<CrawledContent> r3 = executionsAdapter.hasCrawledContent(cc3);
-        assertThat(r3.isPresent()).isTrue();
-        assertThat(r3.get()).isEqualTo(cc1);
-
-        CrawledContent cc4 = CrawledContent.newBuilder()
-                .setWarcId("warc-id4")
-                .build();
-
-        assertThatThrownBy(() -> executionsAdapter.hasCrawledContent(cc4))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("The required field 'digest' is missing from: 'CrawledContent");
-    }
-
-    /**
-     * Test of deleteCrawledContent method, of class RethinkDbAdapter.
-     */
-    @Test
-    public void testDeleteCrawledContent() throws DbException {
-        CrawledContent cc = CrawledContent.newBuilder()
-                .setDigest("testDeleteCrawledContent")
-                .setWarcId("warc-id")
-                .setTargetUri("target-uri")
-                .setDate(ProtoUtils.getNowTs())
-                .build();
-
-        executionsAdapter.hasCrawledContent(cc);
-        executionsAdapter.deleteCrawledContent(cc.getDigest());
-        executionsAdapter.deleteCrawledContent(cc.getDigest());
     }
 }
